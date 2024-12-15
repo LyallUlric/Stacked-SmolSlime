@@ -258,7 +258,12 @@ uint16_t icm45_fifo_read(const struct i2c_dt_spec *dev_i2c, uint8_t *data, uint1
 int icm45_fifo_process(uint16_t index, uint8_t *data, float g[3])
 {
 	index *= 8; // Packet size 8 bytes
-	// TODO: No way to tell if packet is empty?
+	if (data[index] != 0x20) // GYRO_EN
+	{
+		LOG_ERR("Invalid header: %016llX", (*(uint64_t *)&data[index])); // will print backwards
+		return 1; // Skip invalid header
+	}
+	// Empty packet is 7F filled
 	// combine into 16 bit values
 	float raw[3];
 	for (int i = 0; i < 3; i++) // x, y, z
@@ -271,8 +276,6 @@ int icm45_fifo_process(uint16_t index, uint8_t *data, float g[3])
 	for (int i = 0; i < 3; i++) // x, y, z
 		raw[i] *= gyro_sensitivity;
 	memcpy(g, raw, sizeof(raw));
-	if (fabsf(g[0]) > 300 || fabsf(g[1]) > 300 || fabsf(g[2]) > 300) // record suspicious data
-		LOG_ERR("%02X %02X %02X %02X %02X %02X %02X %02X, %.2f, %.2f, %.2f", data[index], data[index + 1], data[index + 2], data[index + 3], data[index + 4], data[index + 5], data[index + 6], data[index + 7], g[0], g[1], g[2]);
 	return 0;
 }
 
