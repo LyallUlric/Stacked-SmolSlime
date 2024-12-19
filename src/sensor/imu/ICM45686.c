@@ -31,7 +31,6 @@ int icm45_init(const struct i2c_dt_spec *dev_i2c, float clock_rate, float accel_
 	err |= icm45_update_odr(dev_i2c, accel_time, gyro_time, accel_actual_time, gyro_actual_time);
 //	k_msleep(50); // 10ms Accel, 30ms Gyro startup
 	k_msleep(1); // fuck i dont wanna wait that long
-	err |= i2c_reg_write_byte_dt(dev_i2c, ICM45686_FIFO_CONFIG3, 0x04); // enable FIFO gyro only
 	err |= i2c_reg_write_byte_dt(dev_i2c, ICM45686_FIFO_CONFIG0, 0x40 | 0b000111); // set FIFO Stream mode, set FIFO depth to 2K bytes
 	err |= i2c_reg_write_byte_dt(dev_i2c, ICM45686_FIFO_CONFIG3, 0x05); // begin FIFO stream (FIFO gyro only)
 	if (err)
@@ -227,8 +226,29 @@ int icm45_update_odr(const struct i2c_dt_spec *dev_i2c, float accel_time, float 
 	return 0;
 }
 
+// TODO:
+static int64_t last_debug_time = -1000;
+static int64_t last_debug_dump_time = -1001;
+//
+
 uint16_t icm45_fifo_read(const struct i2c_dt_spec *dev_i2c, uint8_t *data, uint16_t len) // TODO: check if working
 {
+// TODO:
+	bool debug = false;
+	if (last_debug_dump_time != last_debug_time)
+	{
+		debug = true;
+		last_debug_dump_time = last_debug_time;
+		// try to dump registers
+		uint8_t reg[16] = {0};
+		i2c_burst_read_dt(dev_i2c, ICM45686_ACCEL_DATA_X1_UI, &reg[0], 6);
+		i2c_burst_read_dt(dev_i2c, ICM45686_GYRO_DATA_X1_UI, &reg[6], 6);
+		i2c_burst_read_dt(dev_i2c, ICM45686_TEMP_DATA1_UI, &reg[12], 2);
+		i2c_burst_read_dt(dev_i2c, ICM45686_FIFO_COUNT_0, &reg[14], 2);
+		LOG_ERR("bbbb tttt gggggggggggg aaaaaaaaaaaa");
+		LOG_ERR("%04llX %04llX %012llX %012llX", (*(uint64_t *)&reg[14])&0xFFFF, (*(uint64_t *)&reg[12])&0xFFFF, (*(uint64_t *)&reg[6])&0xFFFFFFFFFFFF, (*(uint64_t *)&reg[0])&0xFFFFFFFFFFFF); // will print backwards
+	}
+//
 	uint8_t rawCount[2];
 	int err = i2c_burst_read_dt(dev_i2c, ICM45686_FIFO_COUNT_0, &rawCount[0], 2);
 	uint16_t packets = (uint16_t)(rawCount[1] << 8 | rawCount[0]); // Turn the 16 bits into a unsigned 16-bit value
@@ -252,6 +272,10 @@ uint16_t icm45_fifo_read(const struct i2c_dt_spec *dev_i2c, uint8_t *data, uint1
 		LOG_ERR("I2C error");
 	else if (packets != 0) // keep reading until FIFO is empty
 		packets += icm45_fifo_read(dev_i2c, &data[packets * 8], len - packets * 8);
+	if (debug)
+	{
+		LOG_HEXDUMP_ERR(data, packets * 8, "FIFO data");
+	}
 	return packets;
 }
 
@@ -260,7 +284,13 @@ int icm45_fifo_process(uint16_t index, uint8_t *data, float g[3])
 	index *= 8; // Packet size 8 bytes
 	if (data[index] != 0x20) // GYRO_EN
 	{
-		LOG_ERR("Invalid header: %016llX", (*(uint64_t *)&data[index])); // will print backwards
+// TODO:
+		if (k_uptime_get() - last_debug_time > 1000)
+		{
+			last_debug_time = k_uptime_get();
+			LOG_ERR("Invalid header: %016llX", (*(uint64_t *)&data[index])); // will print backwards
+		}
+//
 		return 1; // Skip invalid header
 	}
 	// Empty packet is 7F filled
