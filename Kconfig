@@ -38,7 +38,7 @@ endchoice
 
 choice
 	prompt "Battery voltage mapping"
-    default BATTERY_NO_MAPPING
+    default BATTERY_USE_REG_LDO_MAPPING
 
 config BATTERY_USE_REG_BUCK_MAPPING
     bool "Use buck regulator mapping (3.7V battery, DCDC)"
@@ -74,7 +74,7 @@ config USER_SHUTDOWN
 
 config USE_IMU_WAKE_UP
     bool "IMU wake up support"
-    default y
+    default n
     help
         Use IMU wake up state if IMU wake up is present.
 
@@ -93,7 +93,7 @@ config WOM_USE_DCDC
 
 config SENSOR_GYRO_ODR
     int "Gyrometer output data rate (Hz)"
-    default 800
+    default 400
     help
         Requested gyrometer output data rate. Actual rate will be raised to the nearest supported rate.
         A higher rate will increase the time to read and process sensor data.
