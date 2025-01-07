@@ -3,12 +3,18 @@
 #include "connection.h"
 
 #include <zephyr/drivers/clock_control/nrf_clock_control.h>
+#if defined(NRF54L15_XXAA)
+#include <hal/nrf_clock.h>
+#endif /* defined(NRF54L15_XXAA) */
 #include <zephyr/sys/crc.h>
+#if defined(CONFIG_CLOCK_CONTROL_NRF2)
+#include <hal/nrf_lrcconf.h>
+#endif
 
 #include "esb.h"
 
 uint8_t last_reset = 0;
-const nrfx_timer_t m_timer = NRFX_TIMER_INSTANCE(1);
+//const nrfx_timer_t m_timer = NRFX_TIMER_INSTANCE(1);
 bool esb_state = false;
 bool timer_state = false;
 bool send_data = false;
@@ -55,17 +61,17 @@ void event_handler(struct esb_evt const *event)
 				{
 					// TODO: Device should never receive packets if it is already paired, why is this packet received?
 					// This may be part of acknowledge
-					if (!nrfx_timer_init_check(&m_timer))
+//					if (!nrfx_timer_init_check(&m_timer))
 					{
 						LOG_WRN("Timer not initialized");
 						break;
 					}
 					if (timer_state == false)
 					{
-						nrfx_timer_resume(&m_timer);
+//						nrfx_timer_resume(&m_timer);
 						timer_state = true;
 					}
-					nrfx_timer_clear(&m_timer);
+//					nrfx_timer_clear(&m_timer);
 					last_reset = 0;
 					led_clock = (rx_payload.data[0] << 8) + rx_payload.data[1]; // sync led flashes :)
 					led_clock_offset = 0;
@@ -77,6 +83,7 @@ void event_handler(struct esb_evt const *event)
 	}
 }
 
+#if defined(CONFIG_CLOCK_CONTROL_NRF)
 int clocks_start(void)
 {
 	int err;
@@ -115,9 +122,52 @@ int clocks_start(void)
 		}
 	} while (err);
 
+#if defined(NRF54L15_XXAA)
+	/* MLTPAN-20 */
+	nrf_clock_task_trigger(NRF_CLOCK, NRF_CLOCK_TASK_PLLSTART);
+#endif /* defined(NRF54L15_XXAA) */
+
 	LOG_DBG("HF clock started");
 	return 0;
 }
+
+#elif defined(CONFIG_CLOCK_CONTROL_NRF2)
+
+int clocks_start(void)
+{
+	int err;
+	int res;
+	const struct device *radio_clk_dev =
+		DEVICE_DT_GET_OR_NULL(DT_CLOCKS_CTLR(DT_NODELABEL(radio)));
+	struct onoff_client radio_cli;
+
+	/** Keep radio domain powered all the time to reduce latency. */
+	nrf_lrcconf_poweron_force_set(NRF_LRCCONF010, NRF_LRCCONF_POWER_DOMAIN_1, true);
+
+	sys_notify_init_spinwait(&radio_cli.notify);
+
+	err = nrf_clock_control_request(radio_clk_dev, NULL, &radio_cli);
+
+	do {
+		err = sys_notify_fetch_result(&radio_cli.notify, &res);
+		if (!err && res) {
+			LOG_ERR("Clock could not be started: %d", res);
+			return res;
+		}
+	} while (err == -EAGAIN);
+
+#if defined(NRF54L15_XXAA)
+	/* MLTPAN-20 */
+	nrf_clock_task_trigger(NRF_CLOCK, NRF_CLOCK_TASK_PLLSTART);
+#endif /* defined(NRF54L15_XXAA) */
+
+	LOG_DBG("HF clock started");
+	return 0;
+}
+
+#else
+BUILD_ASSERT(false, "No Clock Control driver");
+#endif /* defined(CONFIG_CLOCK_CONTROL_NRF2) */
 
 // this was randomly generated
 // TODO: I have no idea?
@@ -147,7 +197,8 @@ int esb_initialize(bool tx)
 		//config.retransmit_count = 0;
 		//config.tx_mode = ESB_TXMODE_MANUAL;
 		// config.payload_length = 32;
-		config.selective_auto_ack = true;
+		config.selective_auto_ack = true; // TODO: while pairing, should be set to false
+		config.use_fast_ramp_up = true;
 	}
 	else
 	{
@@ -162,11 +213,8 @@ int esb_initialize(bool tx)
 		// config.tx_mode = ESB_TXMODE_AUTO;
 		// config.payload_length = 32;
 		config.selective_auto_ack = true;
+		config.use_fast_ramp_up = true;
 	}
-
-	// Fast startup mode
-	NRF_RADIO->MODECNF0 |= RADIO_MODECNF0_RU_Fast << RADIO_MODECNF0_RU_Pos;
-	// nrf_radio_modecnf0_set(NRF_RADIO, true, 0);
 
 	err = esb_init(&config);
 
@@ -192,7 +240,8 @@ int esb_initialize(bool tx)
 
 void esb_deinitialize(void)
 {
-	esb_disable();
+	if (esb_initialized)
+		esb_disable();
 	esb_initialized = false;
 }
 
@@ -257,7 +306,7 @@ void esb_pair(void)
 			}
 			esb_flush_rx();
 			esb_flush_tx();
-			esb_write_payload(&tx_payload_pair); // TODO: Does this still fail after a while?
+			esb_write_payload(&tx_payload_pair);
 			esb_start_tx();
 			k_msleep(1000);
 		}
@@ -268,7 +317,7 @@ void esb_pair(void)
 		k_msleep(1600); // wait for led pattern
 	}
 	LOG_INF("Tracker ID: %u", paired_addr[1]);
-	LOG_INF("Receiver Address: %012llX", (*(uint64_t *)&retained.paired_addr[0] >> 16) & 0xFFFFFFFFFFFF);
+	LOG_INF("Receiver address: %012llX", (*(uint64_t *)&retained.paired_addr[0] >> 16) & 0xFFFFFFFFFFFF);
 
 	connection_set_id(paired_addr[1]);
 
@@ -289,7 +338,11 @@ void esb_write(uint8_t *data)
 {
 	if (!esb_initialized || !esb_paired)
 		return;
+#if defined(NRF54L15_XXAA) // TODO: esb halts with ack and tx fail
+	tx_payload.noack = true;
+#else
 	tx_payload.noack = false;
+#endif
 	memcpy(tx_payload.data, data, tx_payload.length);
 	esb_flush_tx(); // this will clear all transmissions even if they did not complete
 	esb_write_payload(&tx_payload); // Add transmission to queue

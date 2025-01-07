@@ -13,6 +13,16 @@
 
 /* Example of validatable retained data. */
 struct retained_data {
+	/* The uptime from the current session the last time the
+	 * retained data was updated.
+	 */
+	uint64_t uptime_latest;
+
+	/* Cumulative uptime from all previous sessions up through
+	 * uptime_latest of this session.
+	 */
+	uint64_t uptime_sum;
+
 	uint8_t reboot_counter;
 	uint8_t paired_addr[8];
 

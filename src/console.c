@@ -1,6 +1,7 @@
 #include "globals.h"
 #include "system.h"
 #include "sensor.h"
+#include "calibration.h"
 #include "esb.h"
 #include "build_defines.h"
 
@@ -134,16 +135,14 @@ static void print_info(void)
 
 	printk("\nTracker ID: %u\n", retained.paired_addr[1]);
 	printk("Device address: %012llX\n", *(uint64_t *)NRF_FICR->DEVICEADDR & 0xFFFFFFFFFFFF);
-	printk("Receiver Address: %012llX\n", (*(uint64_t *)&retained.paired_addr[0] >> 16) & 0xFFFFFFFFFFFF);
+	printk("Receiver address: %012llX\n", (*(uint64_t *)&retained.paired_addr[0] >> 16) & 0xFFFFFFFFFFFF);
 }
 
-static void print_uptime(void)
+static void print_uptime(const uint64_t ticks, const char *name)
 {
-	uint64_t uptime = k_ticks_to_us_floor64(k_uptime_ticks());
+	uint64_t uptime = k_ticks_to_us_floor64(ticks);
 
-	uint32_t days = uptime / 86400000000;
-	uptime %= 86400000000;
-	uint8_t hours = uptime / 3600000000;
+	uint32_t hours = uptime / 3600000000;
 	uptime %= 3600000000;
 	uint8_t minutes = uptime / 60000000;
 	uptime %= 60000000;
@@ -152,7 +151,7 @@ static void print_uptime(void)
 	uint16_t milliseconds = uptime / 1000;
 	uint16_t microseconds = uptime % 1000;
 
-	printk("Uptime: %u.%02u:%02u:%02u.%03u,%03u\n", days, hours, minutes, seconds, milliseconds, microseconds);
+	printk("%s: %02u:%02u:%02u.%03u,%03u\n", name, hours, minutes, seconds, milliseconds, microseconds);
 }
 
 static void print_meow(void)
@@ -218,40 +217,39 @@ static void console_thread(void)
 		}
 		else if (memcmp(line, command_uptime, sizeof(command_uptime)) == 0)
 		{
-			print_uptime();
+			uint64_t uptime = k_uptime_ticks();
+			print_uptime(uptime, "Uptime");
+			print_uptime(uptime - retained.uptime_latest + retained.uptime_sum, "Accumulated");
 		}
 		else if (memcmp(line, command_reboot, sizeof(command_reboot)) == 0)
 		{
-			sys_reboot(SYS_REBOOT_COLD);
+			sys_request_system_reboot();
 		}
 		else if (memcmp(line, command_calibrate, sizeof(command_calibrate)) == 0)
 		{
 //			reboot_counter_write(101);
 			sensor_request_calibration();
-			k_msleep(1);
-			sys_reboot(SYS_REBOOT_WARM);
+			sys_request_system_reboot();
 		}
 #if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 		else if (memcmp(line, command_6_side, sizeof(command_6_side)) == 0)
 		{
 			sensor_request_calibration_6_side();
-			k_msleep(1);
-			sys_reboot(SYS_REBOOT_WARM);
+			sys_request_system_reboot();
 		}
 #endif
 		else if (memcmp(line, command_pair, sizeof(command_pair)) == 0) 
 		{
 //			reboot_counter_write(102);
 			esb_reset_pair();
-			k_msleep(1);
-			sys_reboot(SYS_REBOOT_WARM);
+			sys_request_system_reboot();
 		}
 #if DFU_EXISTS
 		else if (memcmp(line, command_dfu, sizeof(command_dfu)) == 0)
 		{
 #if ADAFRUIT_BOOTLOADER
 			NRF_POWER->GPREGRET = 0x57;
-			sys_reboot(SYS_REBOOT_COLD);
+			sys_request_system_reboot();
 #endif
 #if NRF5_BOOTLOADER
 			gpio_pin_configure(gpio_dev, 19, GPIO_OUTPUT | GPIO_OUTPUT_INIT_LOW);
