@@ -28,13 +28,14 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 #define ADAFRUIT_BOOTLOADER CONFIG_BUILD_OUTPUT_UF2
 
 int main(void)
+{
 #if DT_NODE_HAS_PROP(ZEPHYR_USER_NODE, pwr_gpios)
     gpio_pin_configure_dt(&gnd, GPIO_OUTPUT_ACTIVE);
     gpio_pin_set_dt(&gnd, 0);
     gpio_pin_configure_dt(&pwr, GPIO_OUTPUT_ACTIVE);
     gpio_pin_set_dt(&pwr, 1);
 #endif 
-{
+
 #if IGNORE_RESET && BUTTON_EXISTS
 	bool reset_pin_reset = false;
 #else
