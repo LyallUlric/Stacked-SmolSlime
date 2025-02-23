@@ -642,8 +642,9 @@ void main_imu_thread(void) {
 			}
 
 			// Fuse all data
+//			float a_sum[3] = {0};
+//			int a_count = 0;
 			float g[3] = {0};
-			float z[3] = {0};
 			max_gyro_speed_square = 0;
 			int processed_packets = 0;
 			float* gyroBias = sensor_calibration_get_gyroBias();
@@ -665,7 +666,7 @@ void main_imu_thread(void) {
 					memcpy(g, aligned, sizeof(g));
 
 					// Process fusion
-					sensor_fusion->update(g, z, z, gyro_actual_time);
+					sensor_fusion->update_gyro(g, gyro_actual_time);
 
 					if (mag_available && mag_enabled)
 					{
@@ -697,15 +698,31 @@ void main_imu_thread(void) {
 					float a[] = {SENSOR_ACCELEROMETER_AXES_ALIGNMENT};
 
 					// Process fusion
-					sensor_fusion->update(z, a, z, accel_actual_time);
+					sensor_fusion->update_accel(a, accel_actual_time);
+
+//					for (int i = 0; i < 3; i++)
+//						a_sum[i] += a[i];
+//					a_count++;
 				}
 
 				processed_packets++;
 			}
-			sensor_fusion->update(z, z, m, sensor_update_time_ms / 1000.0); // TODO: use actual time?
+			sensor_fusion->update_mag(m, sensor_update_time_ms / 1000.0); // TODO: use actual time?
 
 			// Free the FIFO buffer
 			k_free(rawData);
+
+//			// Copy average acceleration for this frame
+//			if (a_count > 0)
+//			{
+//				for (int i = 0; i < 3; i++)
+//					a[i] = a_sum[i] / a_count;
+//			}
+//			else
+//			{
+//				for (int i = 0; i < 3; i++)
+//					a[i] = 0;
+//			}
 
 			// Check packet processing
 			if (processed_packets == 0) {
