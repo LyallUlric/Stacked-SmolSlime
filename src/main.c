@@ -38,7 +38,7 @@ static const struct gpio_dt_spec gnd = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, gnd_gp
 #define DFU_DBL_RESET_MEM 0x20007F7C
 #define DFU_DBL_RESET_APP 0x4ee5677e
 
-uint32_t* dbl_reset_mem = ((uint32_t*)DFU_DBL_RESET_MEM); // retained
+uint32_t* dbl_reset_mem = ((uint32_t*)DFU_DBL_RESET_MEM);
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
@@ -73,6 +73,7 @@ int main(void) {
 
 #if ADAFRUIT_BOOTLOADER && !(IGNORE_RESET && BUTTON_EXISTS) // Using Adafruit bootloader
 	(*dbl_reset_mem) = DFU_DBL_RESET_APP; // Skip DFU
+//	ram_range_retain(dbl_reset_mem, sizeof(dbl_reset_mem), true);
 #endif
 
 	uint8_t reboot_counter = reboot_counter_read();
