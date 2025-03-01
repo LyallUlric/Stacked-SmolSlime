@@ -179,7 +179,7 @@ config SENSOR_GYRO_ODR
 
 config SENSOR_USE_MAG
     bool "Magnetometer support"
-    default n
+    default y
     help
         Use magnetometer if it is present.
 
