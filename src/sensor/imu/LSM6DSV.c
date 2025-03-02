@@ -5,6 +5,7 @@
 #include <hal/nrf_gpio.h>
 
 #include "LSM6DSV.h"
+#include "sensor/sensor_none.h"
 
 #define PACKET_SIZE 7
 
@@ -34,8 +35,8 @@ int lsm_init(const struct i2c_dt_spec *dev_i2c, float clock_rate, float accel_ti
 	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_FIFO_CTRL4, 0x06); // enable Continuous mode
 	if (err)
 		LOG_ERR("I2C error");
-	if (use_ext_fifo)
-		err |= lsm_ext_init(dev_i2c, ext_addr, ext_reg);
+//	if (use_ext_fifo)
+//		err |= lsm_ext_init(dev_i2c, ext_addr, ext_reg);
 	return (err < 0 ? err : 0);
 }
 
@@ -330,36 +331,23 @@ float lsm_temp_read(const struct i2c_dt_spec *dev_i2c)
 	return temp;
 }
 
-uint8_t lsm_setup_WOM(const struct i2c_dt_spec *dev_i2c) // TODO: could use HP instead of W_OFS_USR
+uint8_t lsm_setup_WOM(const struct i2c_dt_spec *dev_i2c)
 { // TODO: should be off by the time WOM will be setup
 //	i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_CTRL1, ODR_OFF); // set accel off
 //	i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_CTRL2, ODR_OFF); // set gyro off
 
-	int err = i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_CTRL8, FS_XL_8G); // set accel FS
+	int err = i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_CTRL8, 0xE0 | FS_XL_8G); // set accel FS, set HP_LPF2_XL_BW to lowest bandwidth, enable HP_REF_MODE (set HP_LPF2_XL_BW)
 	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_CTRL1, OP_MODE_XL_LP1 << 4 | ODR_240Hz); // set accel low power mode 1, set accel ODR (enable accel)
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_CTRL9, 0x02); // set offset weight to 2^-6 g/LSB
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_TAP_CFG0, 0x10); // set SLOPE_FDS (using user offset for wake-up)
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_WAKE_UP_THS, 0x40 | 0x04); // use offset correction for wake-up, set threshold, 4 * 7.8125 mg is ~31.25 mg
+	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_CTRL9, 0x50); // enable HP_REF_MODE (set HP_REF_MODE_XL and HP_SLOPE_XL_EN)
+	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_TAP_CFG0, 0x10); // set SLOPE_FDS
+	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_WAKE_UP_THS, 0x04); // set threshold, 4 * 7.8125 mg is ~31.25 mg
 	k_msleep(11); // need to wait for accel to settle
-
-	float accel_reference[3] = {0};
-	lsm_accel_read(dev_i2c, accel_reference); // need to read a reference value to set offset
-	int8_t offset[3] = {0};
-	for (int i = 0; i < 3; i++) // calculate offset
-	{
-		accel_reference[i] /= 2; // FS_XL_8G to FS_XL_16G
-		accel_reference[i] *= -1; // negate
-		accel_reference[i] *= 64; // offset is 2^-6 g/LSB
-		accel_reference[i] += accel_reference[i] < 0 ? -0.5f : 0.5f; // round
-		offset[i] = CLAMP(accel_reference[i], -127, 127); // value must be in the range -127 to 127
-	}
-	err |= i2c_burst_write_dt(dev_i2c, LSM6DSV_X_OFS_USR, offset, 3); // set offset correction
 
 	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_FUNCTIONS_ENABLE, 0x80); // enable interrupts
 	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_MD1_CFG, 0x20); // route wake-up to INT1
 	if (err)
 		LOG_ERR("I2C error");
-	return NRF_GPIO_PIN_PULLUP << 4 | NRF_GPIO_PIN_SENSE_LOW; // active low
+	return NRF_GPIO_PIN_NOPULL << 4 | NRF_GPIO_PIN_SENSE_HIGH; // active high
 }
 
 int lsm_ext_setup(uint8_t addr, uint8_t reg)
@@ -399,11 +387,26 @@ void lsm_ext_read(const struct i2c_dt_spec *dev_i2c, uint8_t *raw_m)
 		LOG_ERR("I2C error");
 }
 
+static bool passthrough_enabled = false;
+
 int lsm_ext_passthrough(const struct i2c_dt_spec *dev_i2c, bool passthrough)
 {
-	int err = i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_FUNC_CFG_ACCESS, 0x40); // switch to sensor hub registers
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_MASTER_CONFIG, passthrough ? 0x10 : 0x24); // toggle passthrough (trigger from INT2, MASTER_ON)
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_FUNC_CFG_ACCESS, 0x00); // switch to normal registers
+	int err = 0;
+	if (passthrough_enabled == passthrough)
+		return 0;
+	if (passthrough)
+	{
+		err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_FUNC_CFG_ACCESS, 0x40); // switch to sensor hub registers
+		err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_MASTER_CONFIG, 0x10); // passthrough on
+		err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_FUNC_CFG_ACCESS, 0x00); // switch to normal registers
+	}
+	else
+	{
+		err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_FUNC_CFG_ACCESS, 0x40); // switch to sensor hub registers
+		err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_MASTER_CONFIG, 0x00); // passthrough off
+		err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_FUNC_CFG_ACCESS, 0x00); // switch to normal registers
+	}
+	passthrough_enabled = passthrough;
 	if (err)
 		LOG_ERR("I2C error");
 	return 0;
@@ -436,8 +439,8 @@ const sensor_imu_t sensor_imu_lsm6dsv = {
 
 	*lsm_setup_WOM,
 	
-	*lsm_ext_setup,
-	*lsm_fifo_process_ext,
-	*lsm_ext_read,
+	*imu_none_ext_setup,
+	*imu_none_fifo_process_ext,
+	*imu_none_ext_read,
 	*lsm_ext_passthrough
 };
