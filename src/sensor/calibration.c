@@ -198,8 +198,13 @@ void sensor_calibrate_6_side(
 }
 #endif
 
-void sensor_sample_mag(const float a[3], const float m[3]) {
-	magneto_sample(m[0], m[1], m[2], ata, &norm_sum, &sample_count);  // 400us
+void sensor_sample_mag(const float a[3], const float m[3])
+{
+	float zero[3] = {0};
+	if (v_diff_mag(magBAinv[0], zero) != 0)
+		return; // magnetometer calibration already exists
+
+	magneto_sample(m[0], m[1], m[2], ata, &norm_sum, &sample_count); // 400us
 	int new_mag_progress = mag_progress;
 	new_mag_progress |= (-1.2f < a[0] && a[0] < -0.8f ? 1 << 0 : 0) | (1.2f > a[0] && a[0] > 0.8f ? 1 << 1 : 0) | // dumb check if all accel axes were reached for calibration, assume the user is intentionally doing this
 		(-1.2f < a[1] && a[1] < -0.8f ? 1 << 2 : 0) | (1.2f > a[1] && a[1] > 0.8f ? 1 << 3 : 0) |

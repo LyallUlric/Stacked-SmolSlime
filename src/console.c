@@ -34,6 +34,10 @@ static K_THREAD_STACK_DEFINE(console_thread_id_stack, 512);
 static const struct device *gpio_dev = DEVICE_DT_GET(DT_NODELABEL(gpio0));
 #endif
 
+#if DT_NODE_EXISTS(DT_NODELABEL(mag))
+#define SENSOR_MAG_EXISTS true
+#endif
+
 static const char *meows[] = {
 	"Meow",
 	"Meow meow",
@@ -114,10 +118,14 @@ static void print_info(void)
 	printk("Target: " CONFIG_BOARD_TARGET "\n");
 
 	printk("\nIMU address: 0x%02X, register: 0x%02X\n", retained.imu_addr, retained.imu_reg);
+#if SENSOR_MAG_EXISTS
 	printk("Magnetometer address: 0x%02X, register: 0x%02X\n", retained.mag_addr, retained.mag_reg);
+#endif
 
 	printk("\nIMU: %s\n", sensor_get_sensor_imu_name());
+#if SENSOR_MAG_EXISTS
 	printk("Magnetometer: %s\n", sensor_get_sensor_mag_name());
+#endif
 
 #if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 	printk("\nAccelerometer matrix:\n");
@@ -127,10 +135,12 @@ static void print_info(void)
 	printk("\nAccelerometer bias: %.5f %.5f %.5f\n", (double)retained.accelBias[0], (double)retained.accelBias[1], (double)retained.accelBias[2]);
 #endif
 	printk("Gyroscope bias: %.5f %.5f %.5f\n", (double)retained.gyroBias[0], (double)retained.gyroBias[1], (double)retained.gyroBias[2]);
-	printk("Magnetometer bridge offset: %.5f %.5f %.5f\n", (double)retained.magBias[0], (double)retained.magBias[1], (double)retained.magBias[2]);
+#if SENSOR_MAG_EXISTS
+//	printk("Magnetometer bridge offset: %.5f %.5f %.5f\n", (double)retained.magBias[0], (double)retained.magBias[1], (double)retained.magBias[2]);
 	printk("Magnetometer matrix:\n");
 	for (int i = 0; i < 3; i++)
 		printk("%.5f %.5f %.5f %.5f\n", (double)retained.magBAinv[0][i], (double)retained.magBAinv[1][i], (double)retained.magBAinv[2][i], (double)retained.magBAinv[3][i]);
+#endif
 
 	printk("\nFusion: %s\n", sensor_get_sensor_fusion_name());
 
@@ -205,6 +215,12 @@ static void console_thread(void)
 	uint8_t command_6_side[] = "6-side";
 #endif
 
+#if SENSOR_MAG_EXISTS
+	printk("mag                          Clear magnetometer calibration\n");
+
+	uint8_t command_mag[] = "mag";
+#endif
+
 	printk("pair                         Clear pairing data\n");
 
 	uint8_t command_pair[] = "pair";
@@ -250,6 +266,12 @@ static void console_thread(void)
 		{
 			sensor_request_calibration_6_side();
 			sys_request_system_reboot();
+		}
+#endif
+#if SENSOR_MAG_EXISTS
+		else if (memcmp(line, command_mag, sizeof(command_mag)) == 0)
+		{
+			sensor_calibration_clear_mag();
 		}
 #endif
 		else if (memcmp(line, command_pair, sizeof(command_pair)) == 0) 

@@ -332,12 +332,12 @@ void sensor_retained_read(void)  // TODO: move some of this to sys?
 		(double)retained.gyroBias[2]
 	);
 	if (mag_available && mag_enabled) {
-		LOG_INF(
-			"Magnetometer bridge offset: %.5f %.5f %.5f",
-			(double)retained.magBias[0],
-			(double)retained.magBias[1],
-			(double)retained.magBias[2]
-		);
+//		LOG_INF(
+//			"Magnetometer bridge offset: %.5f %.5f %.5f",
+//			(double)retained.magBias[0],
+//			(double)retained.magBias[1],
+//			(double)retained.magBias[2]
+//		);
 		LOG_INF("Magnetometer matrix:");
 		for (int i = 0; i < 3; i++) {
 			LOG_INF(
