@@ -309,6 +309,8 @@ int icm_fifo_process(uint16_t index, uint8_t *data, float a[3], float g[3])
 	index *= PACKET_SIZE;
 	if ((data[index] & 0x80) == 0x80)
 		return 1; // Skip empty packets
+	if ((data[index] & 0x7F) == 0x7F)
+		return 1; // Skip empty packets
 	// combine into 20 bit values in 32 bit int
 	float a_raw[3] = {0};
 	float g_raw[3] = {0};

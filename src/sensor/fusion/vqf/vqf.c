@@ -43,7 +43,7 @@ static void set_params() {
 	params.tauAcc = 4.5f; // best result for VQF from paper
 	params.tauMag = 10.0f; // best result for VQF from paper	
 	params.biasSigmaInit = 0.25f; // based on gyro ZRO temperature drift
-	params.biasForgettingTime = 1000.0f; // based on gyro ARW(°/√s) * √s = 0.1°
+	params.biasForgettingTime = 200.0f; // based on time for temperature change
 	params.biasClip = 1.0f; // based on gyro ZRO
 	params.biasSigmaMotion = 0.1f;
 	params.biasVerticalForgettingFactor = 0.0001f;
