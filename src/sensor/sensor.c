@@ -570,26 +570,26 @@ void main_imu_thread(void) {
 #endif
 			LOG_DBG("IMU packet count: %u", packets);
 
-			// Read accelerometer
-			float raw_a[3];
-			sensor_imu->accel_read(&sensor_imu_dev, raw_a);
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
-			apply_BAinv(raw_a, sensor_calibration_get_accBAinv());
-			float ax = raw_a[0];
-			float ay = raw_a[1];
-			float az = raw_a[2];
-#else
-			float* accelBias = sensor_calibration_get_accelBias();
-			float ax = raw_a[0] - accelBias[0];
-			float ay = raw_a[1] - accelBias[1];
-			float az = raw_a[2] - accelBias[2];
-#endif
-			float a[] = {SENSOR_ACCELEROMETER_AXES_ALIGNMENT};
-
 			// Read magnetometer and process magneto
 			float mx = 0, my = 0, mz = 0;
-			if (mag_available && mag_enabled
-				&& sensor_mode == SENSOR_SENSOR_MODE_LOW_NOISE) {
+			if (mag_available && mag_enabled && sensor_mode == SENSOR_SENSOR_MODE_LOW_NOISE)
+			{
+				// Read accelerometer first, for calibration // TODO: really?
+				float raw_a[3];
+				sensor_imu->accel_read(&sensor_imu_dev, raw_a);
+#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
+				apply_BAinv(raw_a, sensor_calibration_get_accBAinv());
+				float ax = raw_a[0];
+				float ay = raw_a[1];
+				float az = raw_a[2];
+#else
+				float *accelBias = sensor_calibration_get_accelBias();
+				float ax = raw_a[0] - accelBias[0];
+				float ay = raw_a[1] - accelBias[1];
+				float az = raw_a[2] - accelBias[2];
+#endif
+				float a[] = {SENSOR_ACCELEROMETER_AXES_ALIGNMENT};
+
 				float m[3];
 				sensor_mag->mag_read(&sensor_mag_dev, m);
 //				float* magBias = sensor_calibration_get_magBias();
@@ -686,6 +686,7 @@ void main_imu_thread(void) {
 					float ay = raw_a[1];
 					float az = raw_a[2];
 #else
+					float *accelBias = sensor_calibration_get_accelBias();
 					float ax = raw_a[0] - accelBias[0];
 					float ay = raw_a[1] - accelBias[1];
 					float az = raw_a[2] - accelBias[2];
@@ -708,15 +709,11 @@ void main_imu_thread(void) {
 			k_free(rawData);
 
 			// Copy average acceleration for this frame
+			float a[3] = {0};
 			if (a_count > 0)
 			{
 				for (int i = 0; i < 3; i++)
 					a[i] = a_sum[i] / a_count;
-			}
-			else
-			{
-				for (int i = 0; i < 3; i++)
-					a[i] = 0;
 			}
 
 			// Check packet processing
@@ -743,12 +740,15 @@ void main_imu_thread(void) {
 
 			// Get linear acceleration
 			float lin_a[3] = {0};
-			float vec_gravity[3] = {0};
-			vec_gravity[0] = 2.0f * (q[1] * q[3] - q[0] * q[2]);
-			vec_gravity[1] = 2.0f * (q[2] * q[3] + q[0] * q[1]);
-			vec_gravity[2] = 2.0f * (q[0] * q[0] - 0.5f + q[3] * q[3]);
-			for (int i = 0; i < 3; i++)
-				lin_a[i] = (a[i] - vec_gravity[i]) * CONST_EARTH_GRAVITY; // vector to m/s^2
+			if (v_diff_mag(a, lin_a) != 0) // lin_a as zero vector
+			{
+				float vec_gravity[3] = {0};
+				vec_gravity[0] = 2.0f * (q[1] * q[3] - q[0] * q[2]);
+				vec_gravity[1] = 2.0f * (q[2] * q[3] + q[0] * q[1]);
+				vec_gravity[2] = 2.0f * (q[0] * q[0] - 0.5f + q[3] * q[3]);
+				for (int i = 0; i < 3; i++)
+					lin_a[i] = (a[i] - vec_gravity[i]) * CONST_EARTH_GRAVITY; // vector to m/s^2
+			}
 
 			// Check the IMU gyroscope
 			if (sensor_fusion->get_gyro_sanity() == 0
