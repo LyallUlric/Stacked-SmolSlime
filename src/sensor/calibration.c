@@ -198,6 +198,13 @@ void sensor_calibrate_6_side(
 }
 #endif
 
+static int check_sides(const float *a)
+{
+	return (-1.2f < a[0] && a[0] < -0.8f ? 1 << 0 : 0) | (1.2f > a[0] && a[0] > 0.8f ? 1 << 1 : 0) | // dumb check if all accel axes were reached for calibration, assume the user is intentionally doing this
+		(-1.2f < a[1] && a[1] < -0.8f ? 1 << 2 : 0) | (1.2f > a[1] && a[1] > 0.8f ? 1 << 3 : 0) |
+		(-1.2f < a[2] && a[2] < -0.8f ? 1 << 4 : 0) | (1.2f > a[2] && a[2] > 0.8f ? 1 << 5 : 0);
+}
+
 void sensor_sample_mag(const float a[3], const float m[3])
 {
 	float zero[3] = {0};
@@ -206,9 +213,7 @@ void sensor_sample_mag(const float a[3], const float m[3])
 
 	magneto_sample(m[0], m[1], m[2], ata, &norm_sum, &sample_count); // 400us
 	int new_mag_progress = mag_progress;
-	new_mag_progress |= (-1.2f < a[0] && a[0] < -0.8f ? 1 << 0 : 0) | (1.2f > a[0] && a[0] > 0.8f ? 1 << 1 : 0) | // dumb check if all accel axes were reached for calibration, assume the user is intentionally doing this
-		(-1.2f < a[1] && a[1] < -0.8f ? 1 << 2 : 0) | (1.2f > a[1] && a[1] > 0.8f ? 1 << 3 : 0) |
-		(-1.2f < a[2] && a[2] < -0.8f ? 1 << 4 : 0) | (1.2f > a[2] && a[2] > 0.8f ? 1 << 5 : 0);
+	new_mag_progress |= check_sides(a);
 	if (new_mag_progress > mag_progress && new_mag_progress == last_mag_progress)
 	{
 		if (k_uptime_get() > mag_progress_time)
@@ -477,13 +482,17 @@ void sensor_6_sideBias(
 	const float THRESHOLD_ACC = 0.05f;
 	int resttime = 0;
 
-	mag_progress = 0;  // reusing ata, so guarantee cleared mag progress
+	mag_progress = 0; // reusing ata, so guarantee cleared mag progress
+	last_mag_progress = 0;
+	mag_progress_time = 0;
 	memset(ata, 0, sizeof(ata));
 	norm_sum = 0.0;
 	sample_count = 0.0;
 	int c = 0;
 	printk("Starting accelerometer calibration.\n");
-	while (1) {
+	while (1)
+	{
+		set_led(SYS_LED_PATTERN_LONG, SYS_LED_PRIORITY_SENSOR);
 		printk("Waiting for a resting state...\n");
 		while (1) {
 			sensor_imu->accel_read(dev_i2c, &rawData[0]);
@@ -492,12 +501,27 @@ void sensor_6_sideBias(
 			pre_acc[1] = rawData[1];
 			pre_acc[2] = rawData[2];
 
-			if (rest == 1) {
-				printk(
-					"Rest detected, starting recording. Please do not move. %d\n",
-					c
-				);
-				k_msleep(1000);
+			// force not resting until a new side is detected and stable
+			int new_mag_progress = mag_progress;
+			new_mag_progress |= check_sides(rawData);
+			if (new_mag_progress > mag_progress && new_mag_progress == last_mag_progress)
+			{
+				if (k_uptime_get() < mag_progress_time)
+					rest = 0;
+			}
+			else
+			{
+				mag_progress_time = k_uptime_get() + 1000;
+				last_mag_progress = new_mag_progress;
+				rest = 0;
+			}
+
+			if (rest == 1)
+			{
+				mag_progress = new_mag_progress;
+				printk("Rest detected, starting recording. Please do not move. %d\n", c);
+				set_led(SYS_LED_PATTERN_ON, SYS_LED_PRIORITY_SENSOR);
+				k_msleep(100);
 
 				for (int i = 0; i < 100; i++) {
 					sensor_imu->accel_read(dev_i2c, &rawData[0]);
@@ -514,10 +538,10 @@ void sensor_6_sideBias(
 					}
 					k_msleep(10);
 				}
+				set_led(SYS_LED_PATTERN_ONESHOT_PROGRESS, SYS_LED_PRIORITY_SENSOR);
 				printk("Recorded values!\n");
 				printk("%d side done \n", c);
 				c++;
-				k_msleep(1000);
 				break;
 			}
 			k_msleep(100);
@@ -541,9 +565,11 @@ void sensor_6_sideBias(
 		}
 		k_msleep(5);
 	}
+	mag_progress = 0; // reusing ata, so guarantee cleared mag progress
+	last_mag_progress = 0;
+	mag_progress_time = 0;
 
 	printk("Calculating the data....\n");
-	k_msleep(500);
 	magneto_current_calibration(accBAinv, ata, norm_sum, sample_count);
 
 	printk("Calibration is complete.\n");
