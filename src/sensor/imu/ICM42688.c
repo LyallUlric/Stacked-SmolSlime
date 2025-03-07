@@ -30,6 +30,10 @@ static uint8_t last_gyro_odr = 0xff;
 static const float clock_reference = 32000;
 static float clock_scale = 1; // ODR is scaled by clock_rate/clock_reference
 
+#define FIFO_MULT 0.00075f // assuming i2c fast mode
+
+static float fifo_multiplier = 0;
+
 LOG_MODULE_REGISTER(ICM42688, LOG_LEVEL_DBG);
 
 int icm_init(const struct i2c_dt_spec *dev_i2c, float clock_rate, float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time)
@@ -264,6 +268,18 @@ int icm_update_odr(const struct i2c_dt_spec *dev_i2c, float accel_time, float gy
 	*accel_actual_time = accel_time;
 	*gyro_actual_time = gyro_time;
 
+	// extra read packets by ODR time
+	if (accel_time == 0 && gyro_time != 0)
+		fifo_multiplier = FIFO_MULT / gyro_time; 
+	else if (accel_time != 0 && gyro_time == 0)
+		fifo_multiplier = FIFO_MULT / accel_time;
+	else if (gyro_time > accel_time)
+		fifo_multiplier = FIFO_MULT / accel_time;
+	else if (accel_time > gyro_time)
+		fifo_multiplier = FIFO_MULT / gyro_time;
+	else
+		fifo_multiplier = 0;
+
 	return 0;
 }
 
@@ -278,6 +294,9 @@ uint16_t icm_fifo_read(const struct i2c_dt_spec *dev_i2c, uint8_t *data, uint16_
 		err |= i2c_burst_read_dt(dev_i2c, ICM42688_FIFO_COUNTH, &rawCount[0], 2);
 		uint16_t count = (uint16_t)(rawCount[0] << 8 | rawCount[1]); // Turn the 16 bits into a unsigned 16-bit value
 		packets = count	/ PACKET_SIZE;
+		float extra_read_packets = packets * fifo_multiplier;
+		packets += extra_read_packets;
+		count = packets * PACKET_SIZE;
 		uint16_t limit = len / PACKET_SIZE;
 		if (packets > limit)
 		{

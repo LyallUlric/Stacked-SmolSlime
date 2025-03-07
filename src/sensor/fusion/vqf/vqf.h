@@ -43,6 +43,9 @@ int vqf_get_gyro_sanity(void);
 void vqf_get_lin_a(float *lin_a);
 void vqf_get_quat(float *q);
 
+bool vqf_get_rest_detected(void);
+void vqf_get_relative_rest_deviations(float *out);
+
 extern const sensor_fusion_t sensor_fusion_vqf;
 
 #endif

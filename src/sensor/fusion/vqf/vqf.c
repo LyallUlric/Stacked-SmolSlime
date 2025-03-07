@@ -50,8 +50,8 @@ static void set_params() {
 	params.biasSigmaRest = 0.01f; // changed, unknown reason
 	params.restMinT = 1.5f;
 	params.restFilterTau = 0.5f;
-	params.restThGyr = 1.0f; // based on gyro ZRO
-	params.restThAcc = 0.25f; // based on accel ZRO
+	params.restThGyr = 0.5f; // based on gyro noise
+	params.restThAcc = 0.1f; // based on accel noise
 	params.magCurrentTau = 0.05f;
 	params.magRefTau = 20.0f;
 	params.magNormTh = 0.1f;
@@ -154,10 +154,20 @@ void vqf_get_lin_a(float* lin_a) {
 
 void vqf_get_quat(float* q) { getQuat9D(&state, q); }
 
-const sensor_fusion_t sensor_fusion_vqf
-	= {*vqf_init,
-	   *vqf_load,
-	   *vqf_save,
+bool vqf_get_rest_detected(void)
+{
+	return getRestDetected(&state);
+}
+
+void vqf_get_relative_rest_deviations(float *out)
+{
+	getRelativeRestDeviations(&params, &state, out);
+}
+
+const sensor_fusion_t sensor_fusion_vqf = {
+	*vqf_init,
+	*vqf_load,
+	*vqf_save,
 
 	   *vqf_update_gyro,
 	   *vqf_update_accel,
