@@ -727,8 +727,10 @@ void main_imu_thread(void) {
 					sensor_retained_write();  // keep the fusion state
 					sys_request_system_reboot();
 				}
-			} else if (processed_packets < packets) {
-				LOG_WRN("Only %u/%u packets processed", processed_packets, packets);
+			}
+			else if (processed_packets < packets)
+			{
+				LOG_DBG("Only %u/%u packets processed", processed_packets, packets);
 			}
 			else if (packets > 0)
 			{

@@ -265,7 +265,6 @@ uint16_t icm45_fifo_read(const struct i2c_dt_spec *dev_i2c, uint8_t *data, uint1
 	int err = 0;
 	uint16_t total = 0;
 	uint16_t packets = UINT16_MAX;
-	uint16_t empty_packets = 0;
 	while (packets > 0 && len >= PACKET_SIZE)
 	{
 		uint8_t rawCount[2];
@@ -303,13 +302,9 @@ uint16_t icm45_fifo_read(const struct i2c_dt_spec *dev_i2c, uint8_t *data, uint1
 			else if (data[i * PACKET_SIZE] != 0x78 && fifo_primed) // immediately reset fifo on invalid packet
 			{
 				if (!memcmp(&data[i * PACKET_SIZE], empty, PACKET_SIZE)) // skip if read empty packet
-				{
-					empty_packets++;
 					continue;
-				}
 				LOG_ERR("FIFO error on packet %d/%d", i, packets);
 				LOG_INF("Header: 0x%02X", data[i * PACKET_SIZE]);
-//				LOG_WRN("Discarded %d packets", packets - i);
 				fifo_primed = false;
 				err |= i2c_reg_write_byte_dt(dev_i2c, ICM45686_FIFO_CONFIG3, 0x00); // stop FIFO
 				err |= i2c_reg_write_byte_dt(dev_i2c, ICM45686_FIFO_CONFIG0, 0x00); // reset FIFO config
@@ -325,8 +320,6 @@ uint16_t icm45_fifo_read(const struct i2c_dt_spec *dev_i2c, uint8_t *data, uint1
 		len -= packets * PACKET_SIZE;
 		total += packets;
 	}
-	if (empty_packets)
-		LOG_WRN("FIFO read %d/%d empty packet%s", empty_packets, total, empty_packets > 1 ? "s" : "");
 	return total;
 }
 
