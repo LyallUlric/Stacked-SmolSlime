@@ -325,7 +325,6 @@ void sensor_retained_read(void)  // TODO: move some of this to sys?
 	}
 	if (retained->fusion_id)
 		LOG_INF("Fusion data recovered");
-	}
 }
 
 void sensor_retained_write(void)  // TODO: move to sys?
