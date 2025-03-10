@@ -334,7 +334,7 @@ void sensor_retained_write(void)  // TODO: move to sys?
 	memcpy(retained->magBias, sensor_calibration_get_magBias(), sizeof(retained->magBias));
 	sensor_fusion->save(retained->fusion_data);
 	retained->fusion_id = fusion_id;
-	retained_update();
+	retained_update();}
 }
 
 void sensor_shutdown(void)  // Communicate all imus to shut down
@@ -455,7 +455,7 @@ int main_imu_init(void) {
 		LOG_INF("Applying gyroscope gain");
 		bmi_gain_apply(&sensor_imu_dev, sensor_calibration_get_sensor_data());
 	}
-
+}
 #if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 	// Calibrate 6-side
 	if (isnan(sensor_calibration_get_accBAinv()[0][0])) {
