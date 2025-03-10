@@ -16,7 +16,7 @@ config USE_SLIMENRF_CONSOLE
 
 choice
 	prompt "Battery voltage mapping"
-    default BATTERY_NO_MAPPING
+    default BATTERY_USE_REG_LDO_MAPPING
 
 config BATTERY_USE_REG_BUCK_MAPPING
     bool "Use buck regulator mapping (3.7V battery, DCDC)"
@@ -68,7 +68,7 @@ config USER_SHUTDOWN
 
 config USE_IMU_WAKE_UP
     bool "IMU wake up support"
-    default y
+    default n
     help
         Use IMU wake up state if IMU wake up is present.
 
@@ -178,7 +178,7 @@ config SENSOR_GYRO_ODR
 
 config SENSOR_USE_MAG
     bool "Magnetometer support"
-    default y
+    default n
     help
         Use magnetometer if it is present.
 
