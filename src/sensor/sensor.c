@@ -331,7 +331,6 @@ void sensor_retained_write(void)  // TODO: move to sys?
 {
 	if (!sensor_fusion_init) {
 		return;
-	}
 	memcpy(retained->magBias, sensor_calibration_get_magBias(), sizeof(retained->magBias));
 	sensor_fusion->save(retained->fusion_data);
 	retained->fusion_id = fusion_id;
@@ -451,7 +450,6 @@ int main_imu_init(void) {
 		sensor_calibrate_imu(sensor_imu, &sensor_imu_dev);
 	} else {
 		sensor_calibration_validate();
-	}
 	if (sensor_imu == &sensor_imu_bmi270) // bmi270 specific
 	{
 		LOG_INF("Applying gyroscope gain");
