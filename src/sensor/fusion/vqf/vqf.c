@@ -40,13 +40,13 @@ static float last_a[3] = {0};
 static void set_params() {
 	init_params(&params);
 	// based on BMI270 characteristics
-	params.tauAcc = 4.5f; // best result for VQF from paper
+	params.tauAcc = 2.76f; // best result from optimizer (best result for VQF from paper: 4.5)
 	params.tauMag = 10.0f; // best result for VQF from paper	
-	params.biasSigmaInit = 0.25f; // based on gyro ZRO temperature drift
-	params.biasForgettingTime = 200.0f; // based on time for temperature change
+	params.biasSigmaInit = 0.017f; // best result from optimizer (based on gyro ZRO temperature drift: 0.25)
+	params.biasForgettingTime = 100.0f; // best result from optimizer (based on time for temperature change: 200)
 	params.biasClip = 1.0f; // based on gyro ZRO
-	params.biasSigmaMotion = 0.1f;
-	params.biasVerticalForgettingFactor = 0.0001f;
+	params.biasSigmaMotion = 0.03f; // best result from optimizer
+	params.biasVerticalForgettingFactor = 0.000003f; // best result from optimizer
 	params.biasSigmaRest = 0.01f; // changed, unknown reason
 	params.restMinT = 1.5f;
 	params.restFilterTau = 0.5f;
