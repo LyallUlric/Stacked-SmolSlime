@@ -767,6 +767,7 @@ void main_imu_thread(void) {
 					sys_request_WOM(true); // TODO: should queue shutdown and suspend itself instead
 //					main_imu_suspend(); // TODO: auto suspend, the device should configure WOM ASAP but it does not
 #elif CONFIG_SHUTDOWN_ON_ACTIVE_TIMEOUT && CONFIG_USER_SHUTDOWN
+					main_running = false; // skip suspend step, at the moment the thread must be running to shutdown // TODO: should queue shutdown and suspend itself instead
 					sys_request_system_off();
 #endif
 					sensor_timeout = SENSOR_SENSOR_TIMEOUT_ACTIVITY_ELAPSED; // only try to suspend once
@@ -893,6 +894,8 @@ void wait_for_threads(void)  // TODO: add timeout
 
 void main_imu_suspend(void)  // TODO: add timeout
 {
+	if (!main_running) // don't suspend if already stopped
+		return;
 	main_suspended = true;
 	while (sensor_sensor_scanning) {
 		k_usleep(1);  // try not to interrupt scanning
