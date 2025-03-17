@@ -95,6 +95,7 @@ config SENSOR_LP_TIMEOUT
 
 config SENSOR_USE_LOW_POWER_2
     bool "Use additional low power modes"
+    default y
     help
         Use a higher latency sensor mode during no motion.
 
