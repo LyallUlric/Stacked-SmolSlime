@@ -171,7 +171,7 @@ config SENSOR_ACCEL_ODR
 
 config SENSOR_GYRO_ODR
     int "Gyrometer output data rate (Hz)"
-    default 500
+    default 600
     help
         Requested gyrometer output data rate. Actual rate will be raised to the nearest supported rate.
         A higher rate will increase the time to read and process sensor data.
