@@ -374,10 +374,14 @@ void sys_reset_mode(uint8_t mode) {
 			break;
 		case 2:  // Reset mode pairing reset
 			LOG_INF("Pairing reset requested");
+			//esb_reset_pair();
+			break;
+		case 3:
+			LOG_INF("Pairing reset requested");
 			esb_reset_pair();
 			break;
 #if DFU_EXISTS  // Using DFU bootloader
-		case 3:
+		//case 3:
 		case 4:  // Reset mode DFU
 			LOG_INF("DFU requested");
 #if ADAFRUIT_BOOTLOADER
