@@ -6,20 +6,20 @@
 
 //move to dtsi?
 &pinctrl {
-	i2c0_default: i2c0_default {
-		group1 {
-			psels = <NRF_PSEL(TWIM_SDA, 0, 24)>, <NRF_PSEL(TWIM_SCL, 0, 22)>;
-			bias-disable;
-		};
-	};
+	// i2c0_default: i2c0_default {
+	// 	group1 {
+	// 		psels = <NRF_PSEL(TWIM_SDA, 0, 24)>, <NRF_PSEL(TWIM_SCL, 0, 22)>;
+	// 		bias-disable;
+	// 	};
+	// };
 
-	i2c0_sleep: i2c0_sleep {
-		group1 {
-			psels = <NRF_PSEL(TWIM_SDA, 0, 24)>, <NRF_PSEL(TWIM_SCL, 0, 22)>;
-			bias-disable;
-			low-power-enable;
-		};
-	};
+	// i2c0_sleep: i2c0_sleep {
+	// 	group1 {
+	// 		psels = <NRF_PSEL(TWIM_SDA, 0, 24)>, <NRF_PSEL(TWIM_SCL, 0, 22)>;
+	// 		bias-disable;
+	// 		low-power-enable;
+	// 	};
+	// };
 
 	pwm0_default: pwm0_default {
 		group1 {
@@ -50,17 +50,17 @@
 
 	spi3_default: spi3_default {
 		group1 {
-			psels = <NRF_PSEL(SPIM_MISO, 0, 24)>,
-					<NRF_PSEL(SPIM_MOSI, 0, 6)>,
-					<NRF_PSEL(SPIM_SCK, 0, 8)>;
+			psels = <NRF_PSEL(SPIM_MISO, 0, 11)>,
+					<NRF_PSEL(SPIM_MOSI, 0, 24)>,
+					<NRF_PSEL(SPIM_SCK, 0, 22)>;
 		};
 	};
 
 	spi3_sleep: spi3_sleep {
 		group1 {
-			psels = <NRF_PSEL(SPIM_MISO, 0, 24)>,
-					<NRF_PSEL(SPIM_MOSI, 0, 6)>,
-					<NRF_PSEL(SPIM_SCK, 0, 8)>;
+			psels = <NRF_PSEL(SPIM_MISO, 0, 11)>,
+					<NRF_PSEL(SPIM_MOSI, 0, 24)>,
+					<NRF_PSEL(SPIM_SCK, 0, 22)>;
 			low-power-enable;
 		};
 	};
@@ -142,29 +142,29 @@
 	status = "okay";
 };
 
-&i2c0 {
-	compatible = "nordic,nrf-twim";
-	status = "okay";
-	zephyr,concat-buf-size = <255>; // probable max for nrf52832
-	zephyr,flash-buf-max-size = <255>; // probable max for nrf52832
-	clock-frequency = <I2C_BITRATE_FAST>;
-	pinctrl-0 = <&i2c0_default>;
-	pinctrl-1 = <&i2c0_sleep>;
-	pinctrl-names = "default", "sleep";
+// &i2c0 {
+// 	compatible = "nordic,nrf-twim";
+// 	status = "okay";
+// 	zephyr,concat-buf-size = <255>; // probable max for nrf52832
+// 	zephyr,flash-buf-max-size = <255>; // probable max for nrf52832
+// 	clock-frequency = <I2C_BITRATE_FAST>;
+// 	pinctrl-0 = <&i2c0_default>;
+// 	pinctrl-1 = <&i2c0_sleep>;
+// 	pinctrl-names = "default", "sleep";
 
-	imu: imu@0 { // any address out of range (00, 7f, etc. will search all addresses and stored address first if available, specify an address here to search first otherwise
-		compatible = "i2c-device";
-		label = "imu";
-		reg = <0>;
-	};
+// 	imu: imu@0 { // any address out of range (00, 7f, etc. will search all addresses and stored address first if available, specify an address here to search first otherwise
+// 		compatible = "i2c-device";
+// 		label = "imu";
+// 		reg = <0>;
+// 	};
 
-	mag: mag@0 {
-		compatible = "i2c-device";
-		label = "mag";
-		reg = <0>;
-	};
+// 	mag: mag@0 {
+// 		compatible = "i2c-device";
+// 		label = "mag";
+// 		reg = <0>;
+// 	};
 
-};
+// };
 
 &pwm0 {
 	status = "okay";
@@ -203,7 +203,7 @@ zephyr_udc0: &usbd {
 	pinctrl-0 = <&spi3_default>;
 	pinctrl-1 = <&spi3_sleep>;
 	pinctrl-names = "default", "sleep";
-	cs-gpios = <&gpio0 22 GPIO_ACTIVE_LOW>;
+	cs-gpios = <&gpio1 0 GPIO_ACTIVE_LOW>;
 
 	imu_spi: imu_spi@0 {
 		compatible = "vnd,spi-device";
