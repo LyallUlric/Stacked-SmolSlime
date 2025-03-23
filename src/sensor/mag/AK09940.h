@@ -37,14 +37,14 @@
 #define MT_LND1 0b10 // Low noise drive 1
 #define MT_LND2 0b11 // Low noise drive 2
 
-int ak_init(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time);
-void ak_shutdown(const struct i2c_dt_spec *dev_i2c);
+int ak_init(float time, float *actual_time);
+void ak_shutdown(void);
 
-int ak_update_odr(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time);
+int ak_update_odr(float time, float *actual_time);
 
-void ak_mag_oneshot(const struct i2c_dt_spec *dev_i2c);
-void ak_mag_read(const struct i2c_dt_spec *dev_i2c, float m[3]);
-float ak_temp_read(const struct i2c_dt_spec *dev_i2c, float bias[3]);
+void ak_mag_oneshot(void);
+void ak_mag_read(float m[3]);
+float ak_temp_read(float bias[3]);
 
 void ak_mag_process(uint8_t *raw_m, float m[3]);
 

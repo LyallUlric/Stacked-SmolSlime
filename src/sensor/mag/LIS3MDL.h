@@ -37,14 +37,14 @@
 #define MD_SINGLE_CONV     0x01 // <= 80Hz only
 #define MD_POWER_DOWN      0x03
 
-int lis3_init(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time);
-void lis3_shutdown(const struct i2c_dt_spec *dev_i2c);
+int lis3_init(float time, float *actual_time);
+void lis3_shutdown(void);
 
-int lis3_update_odr(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time);
+int lis3_update_odr(float time, float *actual_time);
 
-void lis3_mag_oneshot(const struct i2c_dt_spec *dev_i2c);
-void lis3_mag_read(const struct i2c_dt_spec *dev_i2c, float m[3]);
-float lis3_temp_read(const struct i2c_dt_spec *dev_i2c, float bias[3]);
+void lis3_mag_oneshot(void);
+void lis3_mag_read(float m[3]);
+float lis3_temp_read(float bias[3]);
 
 void lis3_mag_process(uint8_t *raw_m, float m[3]);
 

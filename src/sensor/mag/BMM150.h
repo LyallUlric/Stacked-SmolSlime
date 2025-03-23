@@ -32,13 +32,13 @@
 #define OPMODE_FORCED 0x01
 #define OPMODE_SLEEP 0x03
 
-int bmm1_init(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time);
-void bmm1_shutdown(const struct i2c_dt_spec *dev_i2c);
+int bmm1_init(float time, float *actual_time);
+void bmm1_shutdown(void);
 
-int bmm1_update_odr(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time);
+int bmm1_update_odr(float time, float *actual_time);
 
-void bmm1_mag_oneshot(const struct i2c_dt_spec *dev_i2c);
-void bmm1_mag_read(const struct i2c_dt_spec *dev_i2c, float m[3]);
+void bmm1_mag_oneshot(void);
+void bmm1_mag_read(float m[3]);
 
 void bmm1_mag_process(uint8_t *raw_m, float m[3]);
 

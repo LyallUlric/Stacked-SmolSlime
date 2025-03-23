@@ -108,18 +108,18 @@
 #define gMode_SBY 0x01
 #define gMode_LN  0x03
 
-int icm_init(const struct i2c_dt_spec *dev_i2c, float clock_rate, float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time);
-void icm_shutdown(const struct i2c_dt_spec *dev_i2c);
+int icm_init(float clock_rate, float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time);
+void icm_shutdown(void);
 
-int icm_update_odr(const struct i2c_dt_spec *dev_i2c, float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time);
+int icm_update_odr(float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time);
 
-uint16_t icm_fifo_read(const struct i2c_dt_spec *dev_i2c, uint8_t *data, uint16_t len);
+uint16_t icm_fifo_read(uint8_t *data, uint16_t len);
 int icm_fifo_process(uint16_t index, uint8_t *data, float a[3], float g[3]);
-void icm_accel_read(const struct i2c_dt_spec *dev_i2c, float a[3]);
-void icm_gyro_read(const struct i2c_dt_spec *dev_i2c, float g[3]);
-float icm_temp_read(const struct i2c_dt_spec *dev_i2c);
+void icm_accel_read(float a[3]);
+void icm_gyro_read(float g[3]);
+float icm_temp_read(void);
 
-uint8_t icm_setup_WOM(const struct i2c_dt_spec *dev_i2c);
+uint8_t icm_setup_WOM(void);
 
 extern const sensor_imu_t sensor_imu_icm42688;
 

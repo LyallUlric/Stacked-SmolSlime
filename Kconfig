@@ -211,7 +211,7 @@ endchoice
 
 config SENSOR_USE_6_SIDE_CALIBRATION
     bool "Use 6-side calibration"
-    default y
+    default n
     depends on USE_SLIMENRF_CONSOLE
     help
         Use 6-side calibration for accelerometer.

@@ -20,24 +20,11 @@
 	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 	THE SOFTWARE.
 */
-#ifndef SLIMENRF_SENSOR_EXT
-#define SLIMENRF_SENSOR_EXT
+#ifndef SLIMENRF_SENSOR_SCAN_SPI
+#define SLIMENRF_SENSOR_SCAN_SPI
 
-#include "sensor.h"
+#include <zephyr/drivers/spi.h>
 
-int mag_ext_setup(const sensor_imu_t *imu, const sensor_mag_t *mag, uint8_t addr);
-
-int mag_ext_init(float time, float *actual_time);
-void mag_ext_shutdown(void);
-
-int mag_ext_update_odr(float time, float *actual_time);
-
-void mag_ext_mag_oneshot(void);
-void mag_ext_mag_read(float m[3]);
-float mag_ext_temp_read(float bias[3]);
-
-void mag_ext_mag_process(uint8_t *raw_m, float m[3]);
-
-extern const sensor_mag_t sensor_mag_ext;
+int sensor_scan_spi(struct spi_dt_spec *bus, uint8_t *spi_dev_reg, int dev_addr_count, const uint8_t dev_reg[], const uint8_t dev_id[], const int dev_ids[]);
 
 #endif

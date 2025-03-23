@@ -34,7 +34,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <math.h>
 
 #include <zephyr/logging/log.h>
-#include <zephyr/drivers/i2c.h>
 
 #include "BMM150.h"
 #include "sensor/sensor_none.h"
@@ -58,33 +57,33 @@ static uint8_t last_odr = 0xff;
 
 LOG_MODULE_REGISTER(BMM150, LOG_LEVEL_DBG);
 
-static int read_trim_registers(const struct i2c_dt_spec *dev_i2c);
+static int read_trim_registers(void);
 static float compensate_x(int16_t mag_data_x, uint16_t data_rhall);
 static float compensate_y(int16_t mag_data_y, uint16_t data_rhall);
 static float compensate_z(int16_t mag_data_z, uint16_t data_rhall);
 
-int bmm1_init(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time)
+int bmm1_init(float time, float *actual_time)
 {
-	int err = i2c_reg_write_byte_dt(dev_i2c, BMM150_POWER_CTRL, 0x01);
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, BMM150_POWER_CTRL, 0x01);
 	k_msleep(2); // BMM150 start-up
-	err |= read_trim_registers(dev_i2c);
+	err |= read_trim_registers();
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 	last_odr = 0xff; // reset last odr
-	err |= bmm1_update_odr(dev_i2c, time, actual_time);
+	err |= bmm1_update_odr(time, actual_time);
 	return (err < 0 ? err : 0);
 }
 
-void bmm1_shutdown(const struct i2c_dt_spec *dev_i2c)
+void bmm1_shutdown(void)
 {
 	last_odr = 0xff; // reset last odr
-//	int err = i2c_reg_write_byte_dt(dev_i2c, BMM150_POWER_CTRL, 0x82); // soft reset
-	int err = i2c_reg_write_byte_dt(dev_i2c, BMM150_POWER_CTRL, 0x00);
+//	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, BMM150_POWER_CTRL, 0x82); // soft reset
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, BMM150_POWER_CTRL, 0x00);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 }
 
-int bmm1_update_odr(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time)
+int bmm1_update_odr(float time, float *actual_time)
 {
 	int ODR;
 	uint8_t DR;
@@ -168,33 +167,33 @@ int bmm1_update_odr(const struct i2c_dt_spec *dev_i2c, float time, float *actual
 	else
 		last_odr = OP_SET;
 
-	int err = i2c_reg_write_byte_dt(dev_i2c, BMM150_OP_CTRL, OP_SET << 1);
-	err |= i2c_reg_write_byte_dt(dev_i2c, BMM150_REP_XY, REP_XY);
-	err |= i2c_reg_write_byte_dt(dev_i2c, BMM150_REP_Z, REP_Z);
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, BMM150_OP_CTRL, OP_SET << 1);
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, BMM150_REP_XY, REP_XY);
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, BMM150_REP_Z, REP_Z);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 
 	*actual_time = time;
 	return err;
 }
 
-void bmm1_mag_oneshot(const struct i2c_dt_spec *dev_i2c)
+void bmm1_mag_oneshot(void)
 {
-	int err = i2c_reg_update_byte_dt(dev_i2c, BMM150_OP_CTRL, 0x06, OPMODE_FORCED << 1);
+	int err = ssi_reg_update_byte(SENSOR_INTERFACE_DEV_MAG, BMM150_OP_CTRL, 0x06, OPMODE_FORCED << 1);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 }
 
-void bmm1_mag_read(const struct i2c_dt_spec *dev_i2c, float m[3])
+void bmm1_mag_read(float m[3])
 {
 	int err = 0;
 	uint8_t status;
 	while ((status & 0x06) == 0x02) // wait for forced mode to complete
-		err |= i2c_reg_read_byte_dt(dev_i2c, BMM150_OP_CTRL, &status);
+		err |= ssi_reg_read_byte(SENSOR_INTERFACE_DEV_MAG, BMM150_OP_CTRL, &status);
 	uint8_t rawData[8];
-	err |= i2c_burst_read_dt(dev_i2c, BMM150_DATAX_LSB, &rawData[0], 8);
+	err |= ssi_burst_read(SENSOR_INTERFACE_DEV_MAG, BMM150_DATAX_LSB, &rawData[0], 8);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 	bmm1_mag_process(rawData, m);
 }
 
@@ -210,17 +209,17 @@ void bmm1_mag_process(uint8_t *raw_m, float m[3])
 }
 
 // from boschsensortec BMM150_SensorAPI
-static int read_trim_registers(const struct i2c_dt_spec *dev_i2c)
+static int read_trim_registers(void)
 {
 	uint8_t trim_x1y1[2] = {0};
 	uint8_t trim_xyz_data[4] = {0};
 	uint8_t trim_xy1xy2[10] = {0};
 
-	int err = i2c_burst_read_dt(dev_i2c, BMM150_DIG_X1, trim_x1y1, 2);
-	err |= i2c_burst_read_dt(dev_i2c, BMM150_DIG_Z4_LSB, trim_xyz_data, 4);
-	err |= i2c_burst_read_dt(dev_i2c, BMM150_DIG_Z2_LSB, trim_xy1xy2, 10);
+	int err = ssi_burst_read(SENSOR_INTERFACE_DEV_MAG, BMM150_DIG_X1, trim_x1y1, 2);
+	err |= ssi_burst_read(SENSOR_INTERFACE_DEV_MAG, BMM150_DIG_Z4_LSB, trim_xyz_data, 4);
+	err |= ssi_burst_read(SENSOR_INTERFACE_DEV_MAG, BMM150_DIG_Z2_LSB, trim_xy1xy2, 10);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 
 	dig_x1 = (int8_t)trim_x1y1[0];
 	dig_y1 = (int8_t)trim_x1y1[1];

@@ -36,14 +36,14 @@
 #define PMU_CMD_FM      0x03
 #define PMU_CMD_FM_FAST 0x04
 
-int bmm3_init(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time);
-void bmm3_shutdown(const struct i2c_dt_spec *dev_i2c);
+int bmm3_init(float time, float *actual_time);
+void bmm3_shutdown(void);
 
-int bmm3_update_odr(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time);
+int bmm3_update_odr(float time, float *actual_time);
 
-void bmm3_mag_oneshot(const struct i2c_dt_spec *dev_i2c);
-void bmm3_mag_read(const struct i2c_dt_spec *dev_i2c, float m[3]);
-float bmm3_temp_read(const struct i2c_dt_spec *dev_i2c, float bias[3]);
+void bmm3_mag_oneshot(void);
+void bmm3_mag_read(float m[3]);
+float bmm3_temp_read(float bias[3]);
 
 void bmm3_mag_process(uint8_t *raw_m, float m[3]);
 

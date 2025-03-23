@@ -37,3 +37,12 @@
 	};
 
 };
+
+arduino_spi: &spi3 {
+	imu_spi: imu_spi@0 {
+		compatible = "vnd,spi-device";
+		spi-max-frequency = <DT_FREQ_M(32)>;
+		label = "imu-spi";
+		reg = <0>;
+	};
+};

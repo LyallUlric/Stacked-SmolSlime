@@ -45,6 +45,7 @@
 #include "mag/MMC5983MA.h"
 
 #include "scan.h"
+#include "scan_spi.h"
 #include "sensor.h"
 #include "sensors_enum.h"
 
@@ -222,6 +223,11 @@ int sensor_scan_imu(struct i2c_dt_spec *i2c_dev, uint8_t *i2c_dev_reg)
 int sensor_scan_mag(struct i2c_dt_spec *i2c_dev, uint8_t *i2c_dev_reg)
 {
 	return sensor_scan(i2c_dev, i2c_dev_reg, i2c_dev_mag_addr_count, i2c_dev_mag_addr, i2c_dev_mag_reg, i2c_dev_mag_id, i2c_dev_mag);
+}
+
+int sensor_scan_imu_spi(struct spi_dt_spec *bus, uint8_t *spi_dev_reg)
+{
+	return sensor_scan_spi(bus, spi_dev_reg, i2c_dev_imu_addr_count, i2c_dev_imu_reg, i2c_dev_imu_id, i2c_dev_imu);
 }
 
 #endif

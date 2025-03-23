@@ -36,13 +36,13 @@
 #define OSR_16 0b100100
 #define OSR_32 0b101101
 
-int ist8306_init(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time);
-void ist8306_shutdown(const struct i2c_dt_spec *dev_i2c);
+int ist8306_init(float time, float *actual_time);
+void ist8306_shutdown(void);
 
-int ist8306_update_odr(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time);
+int ist8306_update_odr(float time, float *actual_time);
 
-void ist8306_mag_oneshot(const struct i2c_dt_spec *dev_i2c);
-void ist8306_mag_read(const struct i2c_dt_spec *dev_i2c, float m[3]);
+void ist8306_mag_oneshot(void);
+void ist8306_mag_read(float m[3]);
 
 void ist8306_mag_process(uint8_t *raw_m, float m[3]);
 

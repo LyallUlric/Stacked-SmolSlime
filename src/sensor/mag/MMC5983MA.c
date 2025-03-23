@@ -11,7 +11,6 @@
 #include <math.h>
 
 #include <zephyr/logging/log.h>
-#include <zephyr/drivers/i2c.h>
 
 #include "MMC5983MA.h"
 
@@ -26,34 +25,34 @@ static bool auto_set_reset = true;
 
 LOG_MODULE_REGISTER(MMC5983MA, LOG_LEVEL_DBG);
 
-static void mmc_SET(const struct i2c_dt_spec *dev_i2c);
-static void mmc_RESET(const struct i2c_dt_spec *dev_i2c);
+static void mmc_SET(void);
+static void mmc_RESET(void);
 
-int mmc_init(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time)
+int mmc_init(float time, float *actual_time)
 {
 	// moved here, it is mmc specific
-	mmc_SET(dev_i2c);													 // "deGauss" magnetometer
+	mmc_SET();													 // "deGauss" magnetometer
 
 	// enable auto set/reset (bit 5 == 1)
-	int err = i2c_reg_write_byte_dt(dev_i2c, MMC5983MA_CONTROL_0, 0x20);
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, MMC5983MA_CONTROL_0, 0x20);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 
 	last_odr = 0xff; // reset last odr
-	err |= mmc_update_odr(dev_i2c, time, actual_time);
+	err |= mmc_update_odr(time, actual_time);
 	return (err < 0 ? err : 0);
 }
 
-void mmc_shutdown(const struct i2c_dt_spec *dev_i2c)
+void mmc_shutdown(void)
 {
 	// reset device
 	last_odr = 0xff; // reset last odr
-	int err = i2c_reg_write_byte_dt(dev_i2c, MMC5983MA_CONTROL_1, 0x80); // Don't need to wait for MMC to finish reset
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, MMC5983MA_CONTROL_1, 0x80); // Don't need to wait for MMC to finish reset
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 }
 
-int mmc_update_odr(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time)
+int mmc_update_odr(float time, float *actual_time)
 {
 	int ODR;
 	uint8_t MODR;
@@ -121,28 +120,28 @@ int mmc_update_odr(const struct i2c_dt_spec *dev_i2c, float time, float *actual_
 		last_odr = MODR;
 
 	// set magnetometer bandwidth
-	int err = i2c_reg_write_byte_dt(dev_i2c, MMC5983MA_CONTROL_1, MBW);
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, MMC5983MA_CONTROL_1, MBW);
 
 	// enable continuous measurement mode (bit 3 == 1), set sample rate
 	// enable automatic Set/Reset (bit 7 == 1), set set/reset rate
-	err |= i2c_reg_write_byte_dt(dev_i2c, MMC5983MA_CONTROL_2, 0x80 | (MSET << 4) | (MODR ? 0x08 : 0) | MODR);
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, MMC5983MA_CONTROL_2, 0x80 | (MSET << 4) | (MODR ? 0x08 : 0) | MODR);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 
 	*actual_time = time;
 	return err;
 }
 
-void mmc_mag_oneshot(const struct i2c_dt_spec *dev_i2c)
+void mmc_mag_oneshot(void)
 {
 	// enable auto set/reset (bit 5 == 1) and trigger oneshot
-	int err = i2c_reg_write_byte_dt(dev_i2c, MMC5983MA_CONTROL_0, (auto_set_reset ? 0x20 : 0) | 0x01);
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, MMC5983MA_CONTROL_0, (auto_set_reset ? 0x20 : 0) | 0x01);
 	oneshot_trigger_time = k_uptime_get();
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 }
 
-void mmc_mag_read(const struct i2c_dt_spec *dev_i2c, float m[3])
+void mmc_mag_read(float m[3])
 {
 	int err = 0;
 	uint8_t status = oneshot_trigger_time ? 0x00 : 0x01;
@@ -150,23 +149,23 @@ void mmc_mag_read(const struct i2c_dt_spec *dev_i2c, float m[3])
 	if (k_uptime_get() >= timeout) // already passed timeout
 		oneshot_trigger_time = 0;
 	while ((~status & 0x01) && k_uptime_get() < timeout) // wait for oneshot to complete or timeout
-		err |= i2c_reg_read_byte_dt(dev_i2c, MMC5983MA_STATUS, &status);
+		err |= ssi_reg_read_byte(SENSOR_INTERFACE_DEV_MAG, MMC5983MA_STATUS, &status);
 	if (oneshot_trigger_time ? k_uptime_get() >= timeout : false)
 		LOG_ERR("Read timeout");
 	oneshot_trigger_time = 0;
 	uint8_t rawData[7]; // x/y/z mag register data stored here
-	err |= i2c_burst_read_dt(dev_i2c, MMC5983MA_XOUT_0, &rawData[0], 7); // Read the 7 raw data registers into data array
+	err |= ssi_burst_read(SENSOR_INTERFACE_DEV_MAG, MMC5983MA_XOUT_0, &rawData[0], 7); // Read the 7 raw data registers into data array
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 	mmc_mag_process(rawData, m);
 }
 
 // MMC must trigger the measurement, which will take significant time
 // instead, the temperature is read from the last measurement and then another measurement is immediately triggered
-float mmc_temp_read(const struct i2c_dt_spec *dev_i2c, float bias[3])
+float mmc_temp_read(float bias[3])
 {
 	uint8_t rawTemp;
-	int err = i2c_reg_read_byte_dt(dev_i2c, MMC5983MA_TOUT, &rawTemp);
+	int err = ssi_reg_read_byte(SENSOR_INTERFACE_DEV_MAG, MMC5983MA_TOUT, &rawTemp);
 	// Temperature output, unsigned format. The range is -75~125°C, about 0.8°C/LSB, 00000000 stands for -75°C
 	float temp = rawTemp;
 	temp *= 0.8f;
@@ -182,28 +181,28 @@ float mmc_temp_read(const struct i2c_dt_spec *dev_i2c, float bias[3])
 		for (int i = 0; i < 3; i++) // clear stored offset
 			bias[i] = 0;
 
-		err |= mmc_update_odr(dev_i2c, INFINITY, &actual_time); // set oneshot mode
+		err |= mmc_update_odr(INFINITY, &actual_time); // set oneshot mode
 		auto_set_reset = false; // disable auto set/reset
 
-		mmc_RESET(dev_i2c);
-		mmc_mag_oneshot(dev_i2c);
-		mmc_mag_read(dev_i2c, mNeg);
+		mmc_RESET();
+		mmc_mag_oneshot();
+		mmc_mag_read(mNeg);
 
-		mmc_SET(dev_i2c);
-		mmc_mag_oneshot(dev_i2c);
-		mmc_mag_read(dev_i2c, mPos);
+		mmc_SET();
+		mmc_mag_oneshot();
+		mmc_mag_read(mPos);
 
 		for (int i = 0; i < 3; i++) // store bridge offset for future readings
 			bias[i] = (mPos[i] + mNeg[i]) / 2; // ((+H + Offset) + (-H + Offset)) / 2
 
 		auto_set_reset = true; // enable auto set/reset
-		err |= mmc_update_odr(dev_i2c, last_time, &actual_time); // reset odr
+		err |= mmc_update_odr(last_time, &actual_time); // reset odr
 	}
 
 	// enable auto set/reset (bit 5 == 1) and trigger measurement
-	err |= i2c_reg_write_byte_dt(dev_i2c, MMC5983MA_CONTROL_0, 0x20 | 0x02);
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, MMC5983MA_CONTROL_0, 0x20 | 0x02);
 	if (err < 0)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 	return temp;
 }
 
@@ -217,19 +216,19 @@ void mmc_mag_process(uint8_t *raw_m, float m[3])
 		m[i] = ((float)rawMag[i] - offset) * sensitivity;
 }
 
-static void mmc_SET(const struct i2c_dt_spec *dev_i2c)
+static void mmc_SET(void)
 {
-	int err = i2c_reg_write_byte_dt(dev_i2c, MMC5983MA_CONTROL_0, 0x08);
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, MMC5983MA_CONTROL_0, 0x08);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 	k_busy_wait(1); // self clearing after 500 ns
 }
 
-static void mmc_RESET(const struct i2c_dt_spec *dev_i2c)
+static void mmc_RESET(void)
 {
-	int err = i2c_reg_write_byte_dt(dev_i2c, MMC5983MA_CONTROL_0, 0x10);
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, MMC5983MA_CONTROL_0, 0x10);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 	k_busy_wait(1); // self clearing after 500 ns
 }
 

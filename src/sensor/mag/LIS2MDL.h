@@ -19,14 +19,14 @@
 #define MD_SINGLE     0x01 // Performs oneshot, then switches to idle
 #define MD_IDLE       0x03
 
-int lis2_init(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time);
-void lis2_shutdown(const struct i2c_dt_spec *dev_i2c);
+int lis2_init(float time, float *actual_time);
+void lis2_shutdown(void);
 
-int lis2_update_odr(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time);
+int lis2_update_odr(float time, float *actual_time);
 
-void lis2_mag_oneshot(const struct i2c_dt_spec *dev_i2c);
-void lis2_mag_read(const struct i2c_dt_spec *dev_i2c, float m[3]);
-float lis2_temp_read(const struct i2c_dt_spec *dev_i2c, float bias[3]);
+void lis2_mag_oneshot(void);
+void lis2_mag_read(float m[3]);
+float lis2_temp_read(float bias[3]);
 
 void lis2_mag_process(uint8_t *raw_m, float m[3]);
 

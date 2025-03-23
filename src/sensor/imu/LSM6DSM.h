@@ -51,15 +51,15 @@
 #define DSM_OP_MODE_G_AWAKE 0x00 // Gyro active
 #define DSM_OP_MODE_G_SLEEP 0x40 // Gyro sleep
 
-int lsm6dsm_init(const struct i2c_dt_spec *dev_i2c, float clock_rate, float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time);
-void lsm6dsm_shutdown(const struct i2c_dt_spec *dev_i2c);
+int lsm6dsm_init(float clock_rate, float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time);
+void lsm6dsm_shutdown(void);
 
-int lsm6dsm_update_odr(const struct i2c_dt_spec *dev_i2c, float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time);
+int lsm6dsm_update_odr(float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time);
 
-uint16_t lsm6dsm_fifo_read(const struct i2c_dt_spec *dev_i2c, uint8_t *data, uint16_t len);
-uint16_t lsm6dsm_fifo_read(const struct i2c_dt_spec *dev_i2c, uint8_t *data, uint16_t len);
+uint16_t lsm6dsm_fifo_read(uint8_t *data, uint16_t len);
+uint16_t lsm6dsm_fifo_read(uint8_t *data, uint16_t len);
 
-uint8_t lsm6dsm_setup_WOM(const struct i2c_dt_spec *dev_i2c);
+uint8_t lsm6dsm_setup_WOM(void);
 
 int lsm6dsm_ext_setup(uint8_t ext_addr, uint8_t ext_reg);
 

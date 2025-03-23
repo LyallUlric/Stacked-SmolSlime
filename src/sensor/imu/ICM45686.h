@@ -136,20 +136,20 @@ writing to the register pointed by the post-auto-incremented address.
 #define GYRO_ODR_3_125Hz  0x0E
 #define GYRO_ODR_1_5625Hz 0x0F
 
-int icm45_init(const struct i2c_dt_spec *dev_i2c, float clock_rate, float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time);
-void icm45_shutdown(const struct i2c_dt_spec *dev_i2c);
+int icm45_init(float clock_rate, float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time);
+void icm45_shutdown(void);
 
-int icm45_update_odr(const struct i2c_dt_spec *dev_i2c, float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time);
+int icm45_update_odr(float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time);
 
-uint16_t icm45_fifo_read(const struct i2c_dt_spec *dev_i2c, uint8_t *data, uint16_t len);
+uint16_t icm45_fifo_read(uint8_t *data, uint16_t len);
 int icm45_fifo_process(uint16_t index, uint8_t *data, float a[3], float g[3]);
-void icm45_accel_read(const struct i2c_dt_spec *dev_i2c, float a[3]);
-void icm45_gyro_read(const struct i2c_dt_spec *dev_i2c, float g[3]);
-float icm45_temp_read(const struct i2c_dt_spec *dev_i2c);
+void icm45_accel_read(float a[3]);
+void icm45_gyro_read(float g[3]);
+float icm45_temp_read(void);
 
-uint8_t icm45_setup_WOM(const struct i2c_dt_spec *dev_i2c);
+uint8_t icm45_setup_WOM(void);
 
-int icm45_ext_passthrough(const struct i2c_dt_spec *dev_i2c, bool passthrough);
+int icm45_ext_passthrough(bool passthrough);
 
 extern const sensor_imu_t sensor_imu_icm45686;
 

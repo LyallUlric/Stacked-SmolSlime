@@ -52,6 +52,10 @@ static uint8_t get_server_constant_tracker_status(int status) __attribute__((unu
 #define SVR_IMU_LSM6DSV 13
 #define SVR_IMU_LSM6DSO 14
 #define SVR_IMU_LSM6DSR 15
+#define SVR_IMU_ICM45686 16
+#define SVR_IMU_ICM45605 17
+#define SVR_IMU_ADC_RESISTANCE 18
+#define SVR_IMU_DEV_RESERVED 250
 
 #define SVR_BOARD_UNKNOWN 0
 #define SVR_BOARD_SLIMEVR_LEGACY 1
@@ -72,6 +76,8 @@ static uint8_t get_server_constant_tracker_status(int status) __attribute__((unu
 #define SVR_BOARD_WEMOSWROOM02 16
 #define SVR_BOARD_XIAO_ESP32C3 17
 #define SVR_BOARD_HARITORA 18
+#define SVR_BOARD_ESP32C6DEVKITC1 19
+#define SVR_BOARD_GLOVE_IMU_SLIMEVR_DEV 20
 #define SVR_BOARD_DEV_RESERVED 250
 
 #define SVR_MCU_UNKNOWN 0
@@ -84,6 +90,11 @@ static uint8_t get_server_constant_tracker_status(int status) __attribute__((unu
 #define SVR_MCU_MOCOPI 7
 #define SVR_MCU_HARITORA 8
 #define SVR_MCU_DEV_RESERVED 250
+
+#define SVR_MAG_STATUS_NOT_SUPPORTED 0
+#define SVR_MAG_STATUS_DISABLED 1
+#define SVR_MAG_STATUS_ENABLED 2
+
 // https://github.com/SlimeVR/SlimeVR-Server/blob/main/server/core/src/main/java/dev/slimevr/tracking/trackers/TrackerStatus.kt
 #define SVR_STATUS_DISCONNECTED 0
 #define SVR_STATUS_OK 1
@@ -194,47 +205,51 @@ static uint8_t get_server_constant_imu_id(int id)
 // does not exist in server enums yet
 static uint8_t get_server_constant_mag_id(int id)
 {
-	switch (id)
-	{
-	case MAG_HMC5883L:
-		return 0;
-	case MAG_QMC5883L:
-		return 0;
-	case MAG_AK8963:
-		return 0;
-	case MAG_AK09916:
-		return 0;
-	case MAG_AK09940:
-		return 0;
-	case MAG_BMM150:
-		return 0;
-	case MAG_BMM350:
-		return 0;
-	case MAG_IST8306:
-		return 0;
-	case MAG_IST8308:
-		return 0;
-	case MAG_IST8320:
-		return 0;
-	case MAG_IST8321:
-		return 0;
-	case MAG_LIS2MDL:
-		return 0;
-	case MAG_LIS3MDL:
-		return 0;
-	case MAG_MMC34160PJ:
-		return 0;
-	case MAG_MMC3630KJ:
-		return 0;
-	case MAG_MMC5633NJL:
-		return 0;
-	case MAG_MMC5616WA:
-		return 0;
-	case MAG_MMC5983MA:
-		return 0;
-	default:
-		return 0;
-	}
+	if (id < 0)
+		return SVR_MAG_STATUS_NOT_SUPPORTED;
+	else
+		return CONFIG_SENSOR_USE_MAG ? SVR_MAG_STATUS_ENABLED : SVR_MAG_STATUS_DISABLED; // TODO: toggle from server
+//	switch (id)
+//	{
+//	case MAG_HMC5883L:
+//		return 0;
+//	case MAG_QMC5883L:
+//		return 0;
+//	case MAG_AK8963:
+//		return 0;
+//	case MAG_AK09916:
+//		return 0;
+//	case MAG_AK09940:
+//		return 0;
+//	case MAG_BMM150:
+//		return 0;
+//	case MAG_BMM350:
+//		return 0;
+//	case MAG_IST8306:
+//		return 0;
+//	case MAG_IST8308:
+//		return 0;
+//	case MAG_IST8320:
+//		return 0;
+//	case MAG_IST8321:
+//		return 0;
+//	case MAG_LIS2MDL:
+//		return 0;
+//	case MAG_LIS3MDL:
+//		return 0;
+//	case MAG_MMC34160PJ:
+//		return 0;
+//	case MAG_MMC3630KJ:
+//		return 0;
+//	case MAG_MMC5633NJL:
+//		return 0;
+//	case MAG_MMC5616WA:
+//		return 0;
+//	case MAG_MMC5983MA:
+//		return 0;
+//	default:
+//		return 0;
+//	}
 }
 
 static uint8_t get_server_constant_tracker_status(int status)

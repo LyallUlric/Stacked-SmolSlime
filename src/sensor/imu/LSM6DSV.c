@@ -1,7 +1,6 @@
 #include <math.h>
 
 #include <zephyr/logging/log.h>
-#include <zephyr/drivers/i2c.h>
 #include <hal/nrf_gpio.h>
 
 #include "LSM6DSV.h"
@@ -23,33 +22,35 @@ static bool use_ext_fifo = false;
 
 LOG_MODULE_REGISTER(LSM6DSV, LOG_LEVEL_DBG);
 
-int lsm_init(const struct i2c_dt_spec *dev_i2c, float clock_rate, float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time)
+int lsm_init(float clock_rate, float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time)
 {
-	int err = i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_CTRL6, FS_G_2000DPS); // set gyro FS
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_CTRL8, FS_XL_16G); // set accel FS
+	// setup interface for SPI
+	sensor_interface_spi_configure(SENSOR_INTERFACE_DEV_IMU, MHZ(10), 0);
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_CTRL6, FS_G_2000DPS); // set gyro FS
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_CTRL8, FS_XL_16G); // set accel FS
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 	last_accel_odr = 0xff; // reset last odr
 	last_gyro_odr = 0xff; // reset last odr
-	err |= lsm_update_odr(dev_i2c, accel_time, gyro_time, accel_actual_time, gyro_actual_time);
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_FIFO_CTRL4, 0x06); // enable Continuous mode
+	err |= lsm_update_odr(accel_time, gyro_time, accel_actual_time, gyro_actual_time);
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_FIFO_CTRL4, 0x06); // enable Continuous mode
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 //	if (use_ext_fifo)
-//		err |= lsm_ext_init(dev_i2c, ext_addr, ext_reg);
+//		err |= lsm_ext_init(ext_addr, ext_reg);
 	return (err < 0 ? err : 0);
 }
 
-void lsm_shutdown(const struct i2c_dt_spec *dev_i2c)
+void lsm_shutdown(void)
 {
 	last_accel_odr = 0xff; // reset last odr
 	last_gyro_odr = 0xff; // reset last odr
-	int err = i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_CTRL3, 0x01); // SW_RESET
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_CTRL3, 0x01); // SW_RESET
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 }
 
-int lsm_update_odr(const struct i2c_dt_spec *dev_i2c, float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time)
+int lsm_update_odr(float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time)
 {
 	int ODR;
 	uint8_t OP_MODE_XL;
@@ -228,12 +229,12 @@ int lsm_update_odr(const struct i2c_dt_spec *dev_i2c, float accel_time, float gy
 	last_accel_odr = ODR_XL;
 	last_gyro_odr = ODR_G;
 
-	int err = i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_CTRL1, OP_MODE_XL << 4 | ODR_XL); // set accel ODR and mode
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_CTRL2, OP_MODE_G << 4 | ODR_G); // set gyro ODR and mode
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_CTRL1, OP_MODE_XL << 4 | ODR_XL); // set accel ODR and mode
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_CTRL2, OP_MODE_G << 4 | ODR_G); // set gyro ODR and mode
 
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_FIFO_CTRL3, ODR_XL | (ODR_G << 4)); // set accel and gyro batch rate
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_FIFO_CTRL3, ODR_XL | (ODR_G << 4)); // set accel and gyro batch rate
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 
 	*accel_actual_time = accel_time;
 	*gyro_actual_time = gyro_time;
@@ -241,7 +242,7 @@ int lsm_update_odr(const struct i2c_dt_spec *dev_i2c, float accel_time, float gy
 	return 0;
 }
 
-uint16_t lsm_fifo_read(const struct i2c_dt_spec *dev_i2c, uint8_t *data, uint16_t len)
+uint16_t lsm_fifo_read(uint8_t *data, uint16_t len)
 {
 	int err = 0;
 	uint16_t total = 0;
@@ -249,15 +250,15 @@ uint16_t lsm_fifo_read(const struct i2c_dt_spec *dev_i2c, uint8_t *data, uint16_
 	while (count > 0 && len >= PACKET_SIZE)
 	{
 		uint8_t rawCount[2];
-		err |= i2c_burst_read_dt(dev_i2c, LSM6DSV_FIFO_STATUS1, &rawCount[0], 2);
+		err |= ssi_burst_read(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_FIFO_STATUS1, &rawCount[0], 2);
 		count = (uint16_t)((rawCount[1] & 3) << 8 | rawCount[0]); // Turn the 16 bits into a unsigned 16-bit value. Only LSB on FIFO_STATUS2 is used, but we mask 2nd bit too // TODO: might be 3 bits not 2
 		uint16_t limit = len / PACKET_SIZE;
 		if (count > limit)
 			count = limit;
 		for (int i = 0; i < count; i++)
-			err |= i2c_burst_read_dt(dev_i2c, LSM6DSV_FIFO_DATA_OUT_TAG, &data[i * PACKET_SIZE], PACKET_SIZE);
+			err |= ssi_burst_read(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_FIFO_DATA_OUT_TAG, &data[i * PACKET_SIZE], PACKET_SIZE);
 		if (err)
-			LOG_ERR("I2C error");
+			LOG_ERR("Communication error");
 		data += count * PACKET_SIZE;
 		len -= count * PACKET_SIZE;
 		total += count;
@@ -290,12 +291,12 @@ int lsm_fifo_process(uint16_t index, uint8_t *data, float a[3], float g[3])
 	return 1;
 }
 
-void lsm_accel_read(const struct i2c_dt_spec *dev_i2c, float a[3])
+void lsm_accel_read(float a[3])
 {
 	uint8_t rawAccel[6];
-	int err = i2c_burst_read_dt(dev_i2c, LSM6DSV_OUTX_L_A, &rawAccel[0], 6);
+	int err = ssi_burst_read(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_OUTX_L_A, &rawAccel[0], 6);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 	for (int i = 0; i < 3; i++) // x, y, z
 	{
 		a[i] = (int16_t)((((uint16_t)rawAccel[1 + (i * 2)]) << 8) | rawAccel[i * 2]);
@@ -304,12 +305,12 @@ void lsm_accel_read(const struct i2c_dt_spec *dev_i2c, float a[3])
 	// TODO: for ISM330BX, the accelerometer data is in ZYX order
 }
 
-void lsm_gyro_read(const struct i2c_dt_spec *dev_i2c, float g[3])
+void lsm_gyro_read(float g[3])
 {
 	uint8_t rawGyro[6];
-	int err = i2c_burst_read_dt(dev_i2c, LSM6DSV_OUTX_L_G, &rawGyro[0], 6);
+	int err = ssi_burst_read(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_OUTX_L_G, &rawGyro[0], 6);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 	for (int i = 0; i < 3; i++) // x, y, z
 	{
 		g[i] = (int16_t)((((uint16_t)rawGyro[1 + (i * 2)]) << 8) | rawGyro[i * 2]);
@@ -317,12 +318,12 @@ void lsm_gyro_read(const struct i2c_dt_spec *dev_i2c, float g[3])
 	}
 }
 
-float lsm_temp_read(const struct i2c_dt_spec *dev_i2c)
+float lsm_temp_read(void)
 {
 	uint8_t rawTemp[2];
-	int err = i2c_burst_read_dt(dev_i2c, LSM6DSV_OUT_TEMP_L, &rawTemp[0], 2);
+	int err = ssi_burst_read(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_OUT_TEMP_L, &rawTemp[0], 2);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 	// TSen Temperature sensitivity 256 LSB/°C
 	// The output of the temperature sensor is 0 LSB (typ.) at 25°C
 	float temp = (int16_t)((((uint16_t)rawTemp[1]) << 8) | rawTemp[0]);
@@ -331,22 +332,22 @@ float lsm_temp_read(const struct i2c_dt_spec *dev_i2c)
 	return temp;
 }
 
-uint8_t lsm_setup_WOM(const struct i2c_dt_spec *dev_i2c)
+uint8_t lsm_setup_WOM(void)
 { // TODO: should be off by the time WOM will be setup
-//	i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_CTRL1, ODR_OFF); // set accel off
-//	i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_CTRL2, ODR_OFF); // set gyro off
+//	ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_CTRL1, ODR_OFF); // set accel off
+//	ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_CTRL2, ODR_OFF); // set gyro off
 
-	int err = i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_CTRL8, 0xE0 | FS_XL_8G); // set accel FS, set HP_LPF2_XL_BW to lowest bandwidth, enable HP_REF_MODE (set HP_LPF2_XL_BW)
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_CTRL1, OP_MODE_XL_LP1 << 4 | ODR_240Hz); // set accel low power mode 1, set accel ODR (enable accel)
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_CTRL9, 0x50); // enable HP_REF_MODE (set HP_REF_MODE_XL and HP_SLOPE_XL_EN)
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_TAP_CFG0, 0x10); // set SLOPE_FDS
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_WAKE_UP_THS, 0x04); // set threshold, 4 * 7.8125 mg is ~31.25 mg
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_CTRL8, 0xE0 | FS_XL_8G); // set accel FS, set HP_LPF2_XL_BW to lowest bandwidth, enable HP_REF_MODE (set HP_LPF2_XL_BW)
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_CTRL1, OP_MODE_XL_LP1 << 4 | ODR_240Hz); // set accel low power mode 1, set accel ODR (enable accel)
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_CTRL9, 0x50); // enable HP_REF_MODE (set HP_REF_MODE_XL and HP_SLOPE_XL_EN)
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_TAP_CFG0, 0x10); // set SLOPE_FDS
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_WAKE_UP_THS, 0x04); // set threshold, 4 * 7.8125 mg is ~31.25 mg
 	k_msleep(11); // need to wait for accel to settle
 
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_FUNCTIONS_ENABLE, 0x80); // enable interrupts
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_MD1_CFG, 0x20); // route wake-up to INT1
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_FUNCTIONS_ENABLE, 0x80); // enable interrupts
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_MD1_CFG, 0x20); // route wake-up to INT1
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 	return NRF_GPIO_PIN_NOPULL << 4 | NRF_GPIO_PIN_SENSE_HIGH; // active high
 }
 
@@ -380,43 +381,43 @@ int lsm_fifo_process_ext(uint16_t index, uint8_t *data, float a[3], float g[3], 
 	return 1;
 }
 
-void lsm_ext_read(const struct i2c_dt_spec *dev_i2c, uint8_t *raw_m)
+void lsm_ext_read(uint8_t *raw_m)
 {
-	int err = i2c_burst_read_dt(dev_i2c, LSM6DSV_SENSOR_HUB_1, raw_m, 6);
+	int err = ssi_burst_read(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_SENSOR_HUB_1, raw_m, 6);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 }
 
-int lsm_ext_passthrough(const struct i2c_dt_spec *dev_i2c, bool passthrough)
+int lsm_ext_passthrough(bool passthrough)
 {
 	int err = 0;
 	if (passthrough)
 	{
-		err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_FUNC_CFG_ACCESS, 0x40); // switch to sensor hub registers
-		err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_MASTER_CONFIG, 0x10); // passthrough on
-		err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_FUNC_CFG_ACCESS, 0x00); // switch to normal registers
+		err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_FUNC_CFG_ACCESS, 0x40); // switch to sensor hub registers
+		err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_MASTER_CONFIG, 0x10); // passthrough on
+		err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_FUNC_CFG_ACCESS, 0x00); // switch to normal registers
 	}
 	else
 	{
-		err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_FUNC_CFG_ACCESS, 0x40); // switch to sensor hub registers
-		err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_MASTER_CONFIG, 0x00); // passthrough off
-		err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_FUNC_CFG_ACCESS, 0x00); // switch to normal registers
+		err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_FUNC_CFG_ACCESS, 0x40); // switch to sensor hub registers
+		err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_MASTER_CONFIG, 0x00); // passthrough off
+		err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_FUNC_CFG_ACCESS, 0x00); // switch to normal registers
 	}
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 	return 0;
 }
 
-int lsm_ext_init(const struct i2c_dt_spec *dev_i2c, uint8_t ext_addr, uint8_t ext_reg)
+int lsm_ext_init(uint8_t ext_addr, uint8_t ext_reg)
 {
-	int err = i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_FUNC_CFG_ACCESS, 0x80); // enable sensor hub
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_MASTER_CONFIG, 0x24); // trigger from INT2, MASTER_ON
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_SLV0_ADD, (ext_addr << 1) | 0x01); // set external address, read mode
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_SLV0_SUBADD, ext_reg); // set external register
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_SLV0_CONFIG, 0x08 | 0x06); // enable external sensor fifo and set 6 read operations
-	err |= i2c_reg_write_byte_dt(dev_i2c, LSM6DSV_FUNC_CFG_ACCESS, 0x00); // switch to normal registers
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_FUNC_CFG_ACCESS, 0x80); // enable sensor hub
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_MASTER_CONFIG, 0x24); // trigger from INT2, MASTER_ON
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_SLV0_ADD, (ext_addr << 1) | 0x01); // set external address, read mode
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_SLV0_SUBADD, ext_reg); // set external register
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_SLV0_CONFIG, 0x08 | 0x06); // enable external sensor fifo and set 6 read operations
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_FUNC_CFG_ACCESS, 0x00); // switch to normal registers
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 	return err;
 }
 

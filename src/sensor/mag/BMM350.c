@@ -34,7 +34,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <math.h>
 
 #include <zephyr/logging/log.h>
-#include <zephyr/drivers/i2c.h>
 
 #include "BMM350.h"
 
@@ -58,25 +57,25 @@ static uint8_t last_odr = 0xff;
 
 LOG_MODULE_REGISTER(BMM350, LOG_LEVEL_DBG);
 
-int bmm3_init(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time)
+int bmm3_init(float time, float *actual_time)
 {
-	int err = i2c_reg_write_byte_dt(dev_i2c, BMM350_OTP_CMD_REG, 0x80); // PWR_OFF_OTP
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, BMM350_OTP_CMD_REG, 0x80); // PWR_OFF_OTP
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 	last_odr = 0xff; // reset last odr
-	err |= bmm3_update_odr(dev_i2c, time, actual_time);
+	err |= bmm3_update_odr(time, actual_time);
 	return (err < 0 ? err : 0);
 }
 
-void bmm3_shutdown(const struct i2c_dt_spec *dev_i2c)
+void bmm3_shutdown(void)
 {
 	last_odr = 0xff; // reset last odr
-	int err = i2c_reg_write_byte_dt(dev_i2c, BMM350_CMD, 0xB6);
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, BMM350_CMD, 0xB6);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 }
 
-int bmm3_update_odr(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time)
+int bmm3_update_odr(float time, float *actual_time)
 {
 	int ODR;
 	uint8_t AGGR;
@@ -167,41 +166,41 @@ int bmm3_update_odr(const struct i2c_dt_spec *dev_i2c, float time, float *actual
 	else
 		last_odr = AGGR_SET;
 
-	int err = i2c_reg_write_byte_dt(dev_i2c, BMM350_PMU_CMD_AGGR_SET, AGGR_SET);
-	err |= i2c_reg_write_byte_dt(dev_i2c, BMM350_PMU_CMD, PMU_CMD);
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, BMM350_PMU_CMD_AGGR_SET, AGGR_SET);
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, BMM350_PMU_CMD, PMU_CMD);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 
 	*actual_time = time;
 	return err;
 }
 
-void bmm3_mag_oneshot(const struct i2c_dt_spec *dev_i2c)
+void bmm3_mag_oneshot(void)
 {
-	int err = i2c_reg_write_byte_dt(dev_i2c, BMM350_PMU_CMD, PMU_CMD_FM_FAST);
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, BMM350_PMU_CMD, PMU_CMD_FM_FAST);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 }
 
-void bmm3_mag_read(const struct i2c_dt_spec *dev_i2c, float m[3])
+void bmm3_mag_read(float m[3])
 {
 	int err = 0;
 	uint8_t status;
 	while ((status & 0x01) == 0x01) // wait for forced mode to complete
-		err |= i2c_reg_read_byte_dt(dev_i2c, BMM350_PMU_CMD_STATUS_0, &status);
+		err |= ssi_reg_read_byte(SENSOR_INTERFACE_DEV_MAG, BMM350_PMU_CMD_STATUS_0, &status);
 	uint8_t rawData[9];
-	err |= i2c_burst_read_dt(dev_i2c, BMM350_MAG_X_XLSB, &rawData[0], 9);
+	err |= ssi_burst_read(SENSOR_INTERFACE_DEV_MAG, BMM350_MAG_X_XLSB, &rawData[0], 9);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 	bmm3_mag_process(rawData, m);
 }
 
-float bmm3_temp_read(const struct i2c_dt_spec *dev_i2c, float bias[3])
+float bmm3_temp_read(float bias[3])
 {
 	uint8_t rawTemp[3];
-	int err = i2c_burst_read_dt(dev_i2c, BMM350_TEMP_XLSB, &rawTemp[0], 3);
+	int err = ssi_burst_read(SENSOR_INTERFACE_DEV_MAG, BMM350_TEMP_XLSB, &rawTemp[0], 3);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 	float temp = (int32_t)((((int32_t)rawTemp[2]) << 24) | (((int32_t)rawTemp[1]) << 16) | (((int32_t)rawTemp[0]) << 8)) / 256;
 	temp *= sensitivity_temp;
 	// taken from boschsensortec BMM350_SensorAPI, why is this needed?

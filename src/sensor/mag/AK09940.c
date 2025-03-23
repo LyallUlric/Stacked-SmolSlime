@@ -1,7 +1,6 @@
 #include <math.h>
 
 #include <zephyr/logging/log.h>
-#include <zephyr/drivers/i2c.h>
 
 #include "AK09940.h"
 
@@ -13,22 +12,22 @@ static int64_t oneshot_trigger_time = 0;
 
 LOG_MODULE_REGISTER(AK09940, LOG_LEVEL_DBG);
 
-int ak_init(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time)
+int ak_init(float time, float *actual_time)
 {
 	last_odr = 0xff; // reset last odr
-	int err = ak_update_odr(dev_i2c, time, actual_time);
+	int err = ak_update_odr(time, actual_time);
 	return (err < 0 ? err : 0);
 }
 
-void ak_shutdown(const struct i2c_dt_spec *dev_i2c)
+void ak_shutdown(void)
 {
 	last_odr = 0xff; // reset last odr
-	int err = i2c_reg_write_byte_dt(dev_i2c, AK09940_CNTL4, 0x01);
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, AK09940_CNTL4, 0x01);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 }
 
-int ak_update_odr(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time)
+int ak_update_odr(float time, float *actual_time)
 {
 	int ODR;
 	uint8_t MODE;
@@ -86,23 +85,23 @@ int ak_update_odr(const struct i2c_dt_spec *dev_i2c, float time, float *actual_t
 	if (MODE == MODE_SMM)
 		MODE = MODE_PDM; // set PDM, oneshot will set SMM
 
-	int err = i2c_reg_write_byte_dt(dev_i2c, AK09940_CNTL3, MT_LND2 << 5 | MODE_SMM);
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, AK09940_CNTL3, MT_LND2 << 5 | MODE_SMM);
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 
 	*actual_time = time;
 	return err;
 }
 
-void ak_mag_oneshot(const struct i2c_dt_spec *dev_i2c)
+void ak_mag_oneshot(void)
 {
-	int err = i2c_reg_write_byte_dt(dev_i2c, AK09940_CNTL3, MT_LND2 << 5 | MODE_SMM); // single measurement mode (does not change MT2)
+	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_MAG, AK09940_CNTL3, MT_LND2 << 5 | MODE_SMM); // single measurement mode (does not change MT2)
 	oneshot_trigger_time = k_uptime_get();
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 }
 
-void ak_mag_read(const struct i2c_dt_spec *dev_i2c, float m[3])
+void ak_mag_read(float m[3])
 {
 	int err = 0;
 	uint8_t status = oneshot_trigger_time ? 0x00 : 0x01;
@@ -110,22 +109,22 @@ void ak_mag_read(const struct i2c_dt_spec *dev_i2c, float m[3])
 	if (k_uptime_get() >= timeout) // already passed timeout
 		oneshot_trigger_time = 0;
 	while ((~status & 0x01) && k_uptime_get() < timeout) // wait for oneshot to complete or timeout
-		err |= i2c_reg_read_byte_dt(dev_i2c, AK09940_ST, &status); // polling
+		err |= ssi_reg_read_byte(SENSOR_INTERFACE_DEV_MAG, AK09940_ST, &status); // polling
 	if (oneshot_trigger_time ? k_uptime_get() >= timeout : false)
 		LOG_ERR("Read timeout");
 	oneshot_trigger_time = 0;
 	uint8_t rawData[9];
-	err |= i2c_burst_read_dt(dev_i2c, AK09940_HXL, &rawData[0], 9);
-	err |= i2c_reg_read_byte_dt(dev_i2c, AK09940_ST2, &status); // release protection
+	err |= ssi_burst_read(SENSOR_INTERFACE_DEV_MAG, AK09940_HXL, &rawData[0], 9);
+	err |= ssi_reg_read_byte(SENSOR_INTERFACE_DEV_MAG, AK09940_ST2, &status); // release protection
 	if (err)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 	ak_mag_process(rawData, m);
 }
 
-float ak_temp_read(const struct i2c_dt_spec *dev_i2c, float bias[3])
+float ak_temp_read(float bias[3])
 {
 	uint8_t rawTemp;
-	int err = i2c_reg_read_byte_dt(dev_i2c, AK09940_TMPS, &rawTemp);
+	int err = ssi_reg_read_byte(SENSOR_INTERFACE_DEV_MAG, AK09940_TMPS, &rawTemp);
 	// Temperature [˚C] = 30 – (TMPS) / 1.7
 	// Measurement data is stored in two’s complement and Little Endian format.
 	float temp = (int8_t)rawTemp;
@@ -133,7 +132,7 @@ float ak_temp_read(const struct i2c_dt_spec *dev_i2c, float bias[3])
 	temp += 30;
 	// TODO: see pg.24
 	if (err < 0)
-		LOG_ERR("I2C error");
+		LOG_ERR("Communication error");
 	return temp;
 }
 

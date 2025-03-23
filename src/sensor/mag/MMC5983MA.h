@@ -49,14 +49,14 @@
 #define MSET_1000  0x06
 #define MSET_2000  0x07
 
-int mmc_init(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time);
-void mmc_shutdown(const struct i2c_dt_spec *dev_i2c);
+int mmc_init(float time, float *actual_time);
+void mmc_shutdown(void);
 
-int mmc_update_odr(const struct i2c_dt_spec *dev_i2c, float time, float *actual_time);
+int mmc_update_odr(float time, float *actual_time);
 
-void mmc_mag_oneshot(const struct i2c_dt_spec *dev_i2c);
-void mmc_mag_read(const struct i2c_dt_spec *dev_i2c, float m[3]);
-float mmc_temp_read(const struct i2c_dt_spec *dev_i2c, float bias[3]);
+void mmc_mag_oneshot(void);
+void mmc_mag_read(float m[3]);
+float mmc_temp_read(float bias[3]);
 
 void mmc_mag_process(uint8_t *raw_m, float m[3]);
 

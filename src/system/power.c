@@ -17,7 +17,7 @@
 #define DFU_DBL_RESET_MEM 0x20007F7C
 #define DFU_DBL_RESET_APP 0x4ee5677e
 
-static uint32_t *dbl_reset_mem = ((uint32_t *)DFU_DBL_RESET_MEM); // retained
+static uint32_t *dbl_reset_mem __attribute__((unused)) = ((uint32_t *)DFU_DBL_RESET_MEM); // retained
 
 enum sys_regulator {
 	SYS_REGULATOR_DCDC,
