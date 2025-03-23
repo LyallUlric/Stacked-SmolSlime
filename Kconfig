@@ -95,7 +95,6 @@ config SENSOR_LP_TIMEOUT
 
 config SENSOR_USE_LOW_POWER_2
     bool "Use additional low power modes"
-    default y
     help
         Use a higher latency sensor mode during no motion.
 
@@ -171,7 +170,7 @@ config SENSOR_ACCEL_ODR
 
 config SENSOR_GYRO_ODR
     int "Gyrometer output data rate (Hz)"
-    default 600
+    default 500
     help
         Requested gyrometer output data rate. Actual rate will be raised to the nearest supported rate.
         A higher rate will increase the time to read and process sensor data.
@@ -179,7 +178,7 @@ config SENSOR_GYRO_ODR
 
 config SENSOR_USE_MAG
     bool "Magnetometer support"
-    default y
+    default n
     help
         Use magnetometer if it is present.
 
@@ -211,7 +210,7 @@ endchoice
 
 config SENSOR_USE_6_SIDE_CALIBRATION
     bool "Use 6-side calibration"
-    default n
+    default y
     depends on USE_SLIMENRF_CONSOLE
     help
         Use 6-side calibration for accelerometer.
