@@ -203,12 +203,17 @@ static uint8_t get_server_constant_imu_id(int id)
 }
 
 // does not exist in server enums yet
+#if CONFIG_SENSOR_USE_MAG
+#define SVR_MAG_STATUS SVR_MAG_STATUS_ENABLED
+#else
+#define SVR_MAG_STATUS SVR_MAG_STATUS_DISABLED
+#endif
 static uint8_t get_server_constant_mag_id(int id)
 {
 	if (id < 0)
 		return SVR_MAG_STATUS_NOT_SUPPORTED;
 	else
-		return CONFIG_SENSOR_USE_MAG ? SVR_MAG_STATUS_ENABLED : SVR_MAG_STATUS_DISABLED; // TODO: toggle from server
+		return SVR_MAG_STATUS; // TODO: toggle from server
 //	switch (id)
 //	{
 //	case MAG_HMC5883L:
