@@ -379,9 +379,11 @@ void sensor_shutdown(void) // Communicate all imus to shut down
 
 uint8_t sensor_setup_WOM(void)
 {
+	sys_interface_resume();
 	int err = sensor_init(); // try initialization if possible
 	if (!err)
 		return sensor_imu->setup_WOM();
+	sys_interface_suspend(); // TODO: not suspending after WOM setup
 	LOG_ERR("Failed to configure IMU wake up");
 	return 0;
 }
@@ -540,6 +542,9 @@ void main_imu_thread(void)
 		int64_t time_begin = k_uptime_get();
 		if (main_ok)
 		{
+			// Resume devices
+			sys_interface_resume();
+
 			// Trigger reconfig on sensor mode change
 			bool reconfig = last_sensor_mode != sensor_mode;
 			last_sensor_mode = sensor_mode;
@@ -623,6 +628,9 @@ void main_imu_thread(void)
 					break;
 				};
 			}
+			
+			// Suspend devices
+			sys_interface_suspend();
 
 			// Fuse all data
 			float a_sum[3] = {0};
@@ -807,14 +815,18 @@ void main_imu_thread(void)
 				if (mag_target_time < 0.005f) // cap at 0.005 (200hz), above this the sensor will use oneshot mode instead
 				{
 					mag_target_time = 0.005;
+					sys_interface_resume();
 					int err = sensor_mag->update_odr(INFINITY, &mag_actual_time);
+					sys_interface_suspend();
 					if (!err)
 						LOG_DBG("Switching magnetometer to oneshot");
 					mag_use_oneshot = true;
 				}
 				if (mag_target_time >= 0.005f || mag_actual_time != INFINITY) // under 200Hz or magnetometer did not have a oneshot mode
 				{
+					sys_interface_resume();
 					int err = sensor_mag->update_odr(mag_target_time, &mag_actual_time);
+					sys_interface_suspend();
 					if (!err)
 						LOG_DBG("Switching magnetometer ODR to %.2fHz", 1.0 / (double)mag_actual_time);
 					mag_use_oneshot = false;
@@ -866,7 +878,9 @@ void main_imu_thread(void)
 				}
 				else // only enough time to do one of the two
 				{
+					sys_interface_resume();
 					sensor_mag->temp_read(sensor_calibration_get_magBias()); // for some applicable magnetometer, calibrates bridge offsets
+					sys_interface_suspend();
 					sensor_retained_write();
 				}
 			}
