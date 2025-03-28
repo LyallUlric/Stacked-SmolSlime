@@ -11,6 +11,7 @@
 #include <zephyr/sys/poweroff.h>
 #include <zephyr/sys/reboot.h>
 #include <hal/nrf_gpio.h>
+#include <zephyr/pm/device.h>
 
 #include "power.h"
 
@@ -62,6 +63,46 @@ static const struct gpio_dt_spec ldo_en = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, ldo
 #endif
 
 #define ADAFRUIT_BOOTLOADER CONFIG_BUILD_OUTPUT_UF2
+
+void sys_interface_suspend(void)
+{
+#if DT_NODE_HAS_STATUS_OKAY(DT_PARENT(DT_NODELABEL(imu_spi)))
+	const struct device *const pm_spi_imu = DEVICE_DT_GET(DT_PARENT(DT_NODELABEL(imu_spi)));
+	pm_device_action_run(pm_spi_imu, PM_DEVICE_ACTION_SUSPEND);
+#endif
+#if DT_NODE_HAS_STATUS_OKAY(DT_PARENT(DT_NODELABEL(imu)))
+	const struct device *const pm_i2c_imu = DEVICE_DT_GET(DT_PARENT(DT_NODELABEL(imu)));
+	pm_device_action_run(pm_i2c_imu, PM_DEVICE_ACTION_SUSPEND);
+#endif
+#if DT_NODE_HAS_STATUS_OKAY(DT_PARENT(DT_NODELABEL(mag_spi)))
+	const struct device *const pm_spi_mag = DEVICE_DT_GET(DT_PARENT(DT_NODELABEL(mag_spi)));
+	pm_device_action_run(pm_spi_mag, PM_DEVICE_ACTION_SUSPEND);
+#endif
+#if DT_NODE_HAS_STATUS_OKAY(DT_PARENT(DT_NODELABEL(mag)))
+	const struct device *const pm_i2c_mag = DEVICE_DT_GET(DT_PARENT(DT_NODELABEL(mag)));
+	pm_device_action_run(pm_i2c_mag, PM_DEVICE_ACTION_SUSPEND);
+#endif
+}
+
+void sys_interface_resume(void)
+{
+#if DT_NODE_HAS_STATUS_OKAY(DT_PARENT(DT_NODELABEL(imu_spi)))
+	const struct device *const pm_spi_imu = DEVICE_DT_GET(DT_PARENT(DT_NODELABEL(imu_spi)));
+	pm_device_action_run(pm_spi_imu, PM_DEVICE_ACTION_RESUME);
+#endif
+#if DT_NODE_HAS_STATUS_OKAY(DT_PARENT(DT_NODELABEL(imu)))
+	const struct device *const pm_i2c_imu = DEVICE_DT_GET(DT_PARENT(DT_NODELABEL(imu)));
+	pm_device_action_run(pm_i2c_imu, PM_DEVICE_ACTION_RESUME);
+#endif
+#if DT_NODE_HAS_STATUS_OKAY(DT_PARENT(DT_NODELABEL(mag_spi)))
+	const struct device *const pm_spi_mag = DEVICE_DT_GET(DT_PARENT(DT_NODELABEL(mag_spi)));
+	pm_device_action_run(pm_spi_mag, PM_DEVICE_ACTION_RESUME);
+#endif
+#if DT_NODE_HAS_STATUS_OKAY(DT_PARENT(DT_NODELABEL(mag)))
+	const struct device *const pm_i2c_mag = DEVICE_DT_GET(DT_PARENT(DT_NODELABEL(mag)));
+	pm_device_action_run(pm_i2c_mag, PM_DEVICE_ACTION_RESUME);
+#endif
+}
 
 // TODO: the gpio sense is weird, maybe the device will turn back on immediately after shutdown or after (attempting to) enter WOM
 // TODO: there should be a better system of how to handle all system_off cases and all the sense pins
@@ -227,6 +268,10 @@ static void power_thread(void)
 {
 	while (1)
 	{
+#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(uart0))
+		const struct device *const uart = DEVICE_DT_GET(DT_NODELABEL(uart0));
+		pm_device_action_run(uart, PM_DEVICE_ACTION_SUSPEND);
+#endif
 		bool docked = dock_read();
 		bool charging = chg_read();
 		bool charged = stby_read();

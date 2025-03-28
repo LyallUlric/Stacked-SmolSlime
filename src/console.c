@@ -22,6 +22,7 @@
 #endif
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/sys/reboot.h>
+#include <zephyr/pm/device.h>
 
 #include <ctype.h>
 
@@ -99,10 +100,12 @@ static void console_thread_create(void)
 static void status_cb(enum usb_dc_status_code status, const uint8_t *param)
 {
 	const struct log_backend *backend = log_backend_get_by_name("log_backend_uart");
+	const struct device *const cons = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
 	switch (status)
 	{
 	case USB_DC_CONNECTED:
 		set_status(SYS_STATUS_USB_CONNECTED, true);
+		pm_device_action_run(cons, PM_DEVICE_ACTION_RESUME);
 		log_backend_enable(backend, backend->cb->ctx, CONFIG_LOG_MAX_LEVEL);
 		console_thread_create();
 		break;
@@ -110,6 +113,7 @@ static void status_cb(enum usb_dc_status_code status, const uint8_t *param)
 		set_status(SYS_STATUS_USB_CONNECTED, false);
 		k_thread_abort(&console_thread_id);
 		log_backend_disable(backend);
+		pm_device_action_run(cons, PM_DEVICE_ACTION_SUSPEND);
 		break;
 	default:
 		LOG_DBG("status %u unhandled", status);
