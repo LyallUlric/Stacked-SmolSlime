@@ -108,6 +108,7 @@ static void set_regulator(enum sys_regulator regulator) {
 
 static void wait_for_logging(void)
 {
+#if CONFIG_LOG_BACKEND_UART
 	// only UART backend is disabled usually
 	const struct log_backend *uart_backend = log_backend_get_by_name("log_backend_uart");
 	if (!uart_backend)
@@ -118,6 +119,7 @@ static void wait_for_logging(void)
 		LOG_INF("Delayed for UART backend");
 		k_msleep(200);
 	}
+#endif
 }
 
 #if IMU_INT_EXISTS && CONFIG_DELAY_SLEEP_ON_STATUS

@@ -31,6 +31,26 @@ static float sensor_q[4], sensor_a[3];
 
 LOG_MODULE_REGISTER(connection, LOG_LEVEL_INF);
 
+void connection_clocks_request_start(void)
+{
+	clocks_request_start(0);
+}
+
+void connection_clocks_request_start_delay_us(uint32_t delay_us)
+{
+	clocks_request_start(delay_us);
+}
+
+void connection_clocks_request_stop(void)
+{
+	clocks_stop();
+}
+
+void connection_clocks_request_stop_delay_us(uint32_t delay_us)
+{
+	clocks_request_stop(delay_us);
+}
+
 uint8_t connection_get_id(void)
 {
 	return tracker_id;

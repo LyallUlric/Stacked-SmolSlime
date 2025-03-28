@@ -852,6 +852,10 @@ void main_imu_thread(void)
 				connection_write_packet_0();
 				send_info = false;
 			}
+			else
+			{
+				connection_clocks_request_stop();
+			}
 
 			// Handle magnetometer calibration or bridge offset calibration
 			if (mag_available && mag_enabled && last_sensor_mode == SENSOR_SENSOR_MODE_LOW_POWER && sensor_mode == SENSOR_SENSOR_MODE_LOW_POWER)

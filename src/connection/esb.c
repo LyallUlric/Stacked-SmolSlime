@@ -53,6 +53,9 @@ static struct esb_payload tx_payload_pair = ESB_CREATE_PAYLOAD(0,
 
 static uint8_t paired_addr[8] = {0};
 
+static bool esb_initialized = false;
+static bool esb_paired = false;
+
 LOG_MODULE_REGISTER(esb_event, LOG_LEVEL_INF);
 
 void event_handler(struct esb_evt const *event)
@@ -105,9 +108,13 @@ void event_handler(struct esb_evt const *event)
 	}
 }
 
+bool clock_status = false;
+
 #if defined(CONFIG_CLOCK_CONTROL_NRF)
 int clocks_start(void)
 {
+	if (clock_status)
+		return 0;
 	int err;
 	int res;
 	struct onoff_manager *clk_mgr;
@@ -132,13 +139,14 @@ int clocks_start(void)
 
 	do
 	{
+		k_usleep(100);
 		err = sys_notify_fetch_result(&clk_cli.notify, &res);
 		if (!err && res)
 		{
 			LOG_ERR("Clock could not be started: %d", res);
 			return res;
 		}
-		if (err && ++fetch_attempts > 10000) {
+		if (err && ++fetch_attempts > 10) {
 			LOG_WRN("Unable to fetch Clock request result: %d", err);
 			return err;
 		}
@@ -150,7 +158,19 @@ int clocks_start(void)
 #endif /* defined(NRF54L15_XXAA) */
 
 	LOG_DBG("HF clock started");
+	clock_status = true;
 	return 0;
+}
+
+void clocks_stop(void)
+{
+	clock_status = false;
+	struct onoff_manager *clk_mgr;
+
+	clk_mgr = z_nrf_clock_control_get_onoff(CLOCK_CONTROL_NRF_SUBSYS_HF);
+	onoff_release(clk_mgr);
+
+	LOG_DBG("HF clock stop request");
 }
 
 #elif defined(CONFIG_CLOCK_CONTROL_NRF2)
@@ -191,6 +211,22 @@ int clocks_start(void)
 BUILD_ASSERT(false, "No Clock Control driver");
 #endif /* defined(CONFIG_CLOCK_CONTROL_NRF2) */
 
+static struct k_thread clocks_thread_id;
+static K_THREAD_STACK_DEFINE(clocks_thread_id_stack, 128);
+
+void clocks_request_start(uint32_t delay_us)
+{
+	k_thread_create(&clocks_thread_id, clocks_thread_id_stack, K_THREAD_STACK_SIZEOF(clocks_thread_id_stack), (k_thread_entry_t)clocks_start, NULL, NULL, NULL, 5, 0, K_USEC(delay_us));
+}
+
+static struct k_thread clocks_stop_thread_id;
+static K_THREAD_STACK_DEFINE(clocks_stop_thread_id_stack, 128);
+
+void clocks_request_stop(uint32_t delay_us)
+{
+	k_thread_create(&clocks_stop_thread_id, clocks_stop_thread_id_stack, K_THREAD_STACK_SIZEOF(clocks_stop_thread_id), (k_thread_entry_t)clocks_stop, NULL, NULL, NULL, 5, 0, K_USEC(delay_us));
+}
+
 // this was randomly generated
 // TODO: I have no idea?
 static const uint8_t discovery_base_addr_0[4] = {0x62, 0x39, 0x8A, 0xF2};
@@ -198,8 +234,6 @@ static const uint8_t discovery_base_addr_1[4] = {0x28, 0xFF, 0x50, 0xB8};
 static const uint8_t discovery_addr_prefix[8] = {0xFE, 0xFF, 0x29, 0x27, 0x09, 0x02, 0xB2, 0xD6};
 
 static uint8_t base_addr_0[4], base_addr_1[4], addr_prefix[8] = {0};
-
-static bool esb_initialized = false;
 
 int esb_initialize(bool tx)
 {
@@ -295,8 +329,6 @@ inline void esb_set_addr_paired(void)
 	memcpy(addr_prefix, addr_buffer + 8, sizeof(addr_prefix));
 }
 
-static bool esb_paired = false;
-
 void esb_pair(void)
 {
 	// Read paired address from retained
@@ -321,6 +353,8 @@ void esb_pair(void)
 		set_led(SYS_LED_PATTERN_SHORT, SYS_LED_PRIORITY_CONNECTION);
 		while (paired_addr[0] != checksum)
 		{
+			if (!clock_status)
+				clocks_start();
 			if (paired_addr[0])
 			{
 				LOG_INF("Incorrect checksum: %02X", paired_addr[0]);
@@ -360,6 +394,8 @@ void esb_write(uint8_t *data)
 {
 	if (!esb_initialized || !esb_paired)
 		return;
+	if (!clock_status)
+		clocks_start(); 
 #if defined(NRF54L15_XXAA) // TODO: esb halts with ack and tx fail
 	tx_payload.noack = true;
 #else
