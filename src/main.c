@@ -38,11 +38,24 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 #if DT_NODE_HAS_PROP(DT_ALIAS(sw0), gpios)
 #define BUTTON_EXISTS true
 #endif
-
+#include <zephyr/drivers/gpio.h>
+#define ZEPHYR_USER_NODE DT_PATH(zephyr_user)
+#if DT_NODE_HAS_PROP(ZEPHYR_USER_NODE, pwr_gpios)
+static const struct gpio_dt_spec pwr = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, pwr_gpios);
+static const struct gpio_dt_spec gnd = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, gnd_gpios);
+#else
+#warning "IMU power pins not defined: do not stack IMU on SUPERMINI"
+#endif
 #define DFU_EXISTS CONFIG_BUILD_OUTPUT_UF2 || CONFIG_BOARD_HAS_NRF5_BOOTLOADER
 #define ADAFRUIT_BOOTLOADER CONFIG_BUILD_OUTPUT_UF2
 
 int main(void) {
+#if DT_NODE_HAS_PROP(ZEPHYR_USER_NODE, pwr_gpios)
+    gpio_pin_configure_dt(&gnd, GPIO_OUTPUT_ACTIVE);
+    gpio_pin_set_dt(&gnd, 0);
+    gpio_pin_configure_dt(&pwr, GPIO_OUTPUT_ACTIVE);
+    gpio_pin_set_dt(&pwr, 1);
+#endif 
 #if IGNORE_RESET && BUTTON_EXISTS
 	bool reset_pin_reset = false;
 #else
