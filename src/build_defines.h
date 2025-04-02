@@ -184,7 +184,7 @@ static uint8_t get_server_constant_imu_id(int id)
 	case IMU_ICM42688:
 		return SVR_IMU_ICM42688;
 	case IMU_ICM45686:
-		return 0;
+		return SVR_IMU_ICM45686;
 	case IMU_ISM330IS:
 		return 0;
 	case IMU_LSM6DS3:
