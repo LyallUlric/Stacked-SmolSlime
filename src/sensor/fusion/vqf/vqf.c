@@ -48,19 +48,19 @@ void vqf_update_sensor_ids(int imu)
 static void set_params()
 {
 	init_params(&params);
-	// based on BMI270 characteristics
-	params.tauAcc = 2.76f; // best result from optimizer (best result for VQF from paper: 4.5)
+	// optimized with ICM-45686 data, (in parentheses based on BMI270 characteristics)
+	params.tauAcc = 7.171490f; // best result from optimizer (best result for VQF from paper: 4.5)
 	params.tauMag = 10.0f; // best result for VQF from paper	
-	params.biasSigmaInit = 0.017f; // best result from optimizer (based on gyro ZRO temperature drift: 0.25)
-	params.biasForgettingTime = 100.0f; // best result from optimizer (based on time for temperature change: 200)
+	params.biasSigmaInit = 0.337976f; // best result from optimizer (based on gyro ZRO temperature drift: 0.25)
+	params.biasForgettingTime = 352.235500f; // best result from optimizer (based on time for temperature change: 200)
 	params.biasClip = 1.0f; // based on gyro ZRO
-	params.biasSigmaMotion = 0.03f; // best result from optimizer
-	params.biasVerticalForgettingFactor = 0.000003f; // best result from optimizer
-	params.biasSigmaRest = 0.01f; // changed, unknown reason
-	params.restMinT = 1.5f;
-	params.restFilterTau = 0.5f;
-	params.restThGyr = 0.5f; // based on gyro noise
-	params.restThAcc = 0.1f; // based on accel noise
+	params.biasSigmaMotion = 0.985346f; // best result from optimizer
+	params.biasVerticalForgettingFactor = 0.007959f; // best result from optimizer
+	params.biasSigmaRest = 0.028897f; // best result from optimizer (changed, unknown reason: 0.01f)
+	params.restMinT = 4.648680f; // best result from optimizer
+	params.restFilterTau = 1.900166f; // best result from optimizer
+	params.restThGyr = 2.620598f; // best result from optimizer (based on gyro noise: 0.5f)
+	params.restThAcc = 2.142593f; // best result from optimizer (based on accel noise: 0.1f)
 	params.magCurrentTau = 0.05f;
 	params.magRefTau = 20.0f;
 	params.magNormTh = 0.1f;
@@ -82,10 +82,10 @@ static void set_params()
 		params.restThAcc = 0.196f;
 		break;
 	case IMU_ICM45686: // currently defaults
-		params.biasSigmaInit = 0.017f;
+		params.biasSigmaInit = 0.337976f;
 		params.biasClip = 1.0f;
-		params.restThGyr = 0.5f;
-		params.restThAcc = 0.1f;
+		params.restThGyr = 2.620598f;
+		params.restThAcc = 2.142593f;
 		break;
 	case IMU_LSM6DS3:
 		params.biasSigmaInit = 3.0f;

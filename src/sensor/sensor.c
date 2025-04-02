@@ -368,6 +368,7 @@ void sensor_retained_write(void) // TODO: move to sys?
 
 void sensor_shutdown(void) // Communicate all imus to shut down
 {
+	sys_interface_resume();
 	int err = sensor_init(); // try initialization if possible
 	if (mag_available) // try to shutdown magnetometer first (in case of passthrough)
 		sensor_mag->shutdown();
@@ -375,6 +376,7 @@ void sensor_shutdown(void) // Communicate all imus to shut down
 		sensor_imu->shutdown();
 	else
 		LOG_ERR("Failed to shutdown sensors");
+	sys_interface_suspend();
 }
 
 uint8_t sensor_setup_WOM(void)
