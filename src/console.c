@@ -24,7 +24,11 @@
 #include <zephyr/sys/reboot.h>
 #include <zephyr/pm/device.h>
 
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <ctype.h>
+#include <math.h>
 
 LOG_MODULE_REGISTER(console, LOG_LEVEL_INF);
 
@@ -174,6 +178,23 @@ static void print_info(void)
 	printk("\nTracker ID: %u\n", retained->paired_addr[1]);
 	printk("Device address: %012llX\n", *(uint64_t *)NRF_FICR->DEVICEADDR & 0xFFFFFFFFFFFF);
 	printk("Receiver address: %012llX\n", (*(uint64_t *)&retained->paired_addr[0] >> 16) & 0xFFFFFFFFFFFF);
+	// Display Gyro sensitivity
+	if (retained) {
+		float scale_x = retained->gyroSensScale[0];
+				float scale_y = retained->gyroSensScale[1];
+				float scale_z = retained->gyroSensScale[2];
+		
+				// Calculate the approximate input degrees difference based on the stored scale factor
+				// degrees = (1.0 - (1.0 / scale)) * 720.0
+				// Add a check for scale being near zero to avoid division issues (though unlikely)
+				float deg_x = (fabsf(scale_x) < 1e-6f) ? 0.0f : (1.0f - (1.0f / scale_x)) * 720.0f;
+				float deg_y = (fabsf(scale_y) < 1e-6f) ? 0.0f : (1.0f - (1.0f / scale_y)) * 720.0f;
+				float deg_z = (fabsf(scale_z) < 1e-6f) ? 0.0f : (1.0f - (1.0f / scale_z)) * 720.0f;
+		
+				printk("Gyroscope sensitivity (degrees diff over 2 rev): %.3f %.3f %.3f\n", (double)deg_x, (double)deg_y, (double)deg_z);
+			} else {
+				printk("Gyroscope sensitivity: Retained data unavailable.\n");
+		}
 }
 
 static void print_uptime(const uint64_t ticks, const char *name)
@@ -232,6 +253,8 @@ static void console_thread(void)
 	printk("uptime                       Get device uptime\n");
 	printk("reboot                       Soft reset the device\n");
 	printk("calibrate                    Calibrate sensor ZRO\n");
+	printk("sens <x>,<y>,<z>             Set gyro sensitivity (deg diff over 2 rev)\n");
+	printk("sens reset                   Reset gyro sensitivity calibration\n");
 
 	uint8_t command_info[] = "info";
 	uint8_t command_uptime[] = "uptime";
@@ -263,6 +286,8 @@ static void console_thread(void)
 	printk("meow                         Meow!\n");
 
 	uint8_t command_meow[] = "meow";
+	uint8_t command_sens[] = "sens ";
+	uint8_t command_sens_reset[] = "sens reset";
 
 	while (1) {
 #if USB_EXISTS
@@ -294,6 +319,107 @@ static void console_thread(void)
 			sensor_request_calibration();
 			sys_request_system_reboot();
 		}
+			else if (memcmp(line, command_sens_reset, sizeof(command_sens_reset) - 1) == 0)
+			{
+				if (retained) {
+					printk("Resetting gyro sensitivity calibration.\n");
+					retained->gyroSensScale[0] = 1.0f;
+					retained->gyroSensScale[1] = 1.0f;
+					retained->gyroSensScale[2] = 1.0f;
+					retained_update(); // Save changes
+					printk("Gyro sensitivity reset to 1.0, 1.0, 1.0\n");
+				} else {
+					printk("Error: Retained data not available.\n");
+				}
+			}
+			else if (strncmp(line, command_sens, sizeof(command_sens) - 1) == 0)
+			{
+				float deg_x = 0.0f, deg_y = 0.0f, deg_z = 0.0f;
+				bool parse_ok = false;
+			char *values_str_modifiable = (char *)line + sizeof(command_sens) - 1;
+
+			char *token;
+			char *endptr; // For strtof error checking
+			int token_count = 0;
+
+			// Get the first token (X value)
+			token = strtok(values_str_modifiable, ",");
+			if (token != NULL) {
+				deg_x = strtof(token, &endptr);
+				// Check if conversion was successful (endptr should point to '\0' or the comma)
+				if (*endptr == '\0' || *endptr == ',') {
+					token_count++;
+					// Get the second token (Y value)
+					token = strtok(NULL, ",");
+					if (token != NULL) {
+						deg_y = strtof(token, &endptr);
+						if (*endptr == '\0' || *endptr == ',') {
+							token_count++;
+							// Get the third token (Z value)
+							token = strtok(NULL, ","); // Use comma or just end of string
+							if (token != NULL) {
+								deg_z = strtof(token, &endptr);
+								// For the last token, endptr must point to the null terminator
+								if (*endptr == '\0') {
+									token_count++;
+									parse_ok = true;
+								}
+							}
+						}
+						}
+					}
+
+			if (parse_ok && token_count == 3) {
+				printk("Parsed degrees (strtof): X=%.3f, Y=%.3f, Z=%.3f\n", (double)deg_x, (double)deg_y, (double)deg_z);
+
+				if (retained) {
+					//printk("Debug: 'retained' pointer is valid. Proceeding with calculation.\n"); // Optional debug
+					float scale_x, scale_y, scale_z; // Local variables for scale
+					float den_x = 1.0f - (deg_x / (360.0f * 2.0f));
+					float den_y = 1.0f - (deg_y / (360.0f * 2.0f));
+					float den_z = 1.0f - (deg_z / (360.0f * 2.0f));
+
+					//printk("Debug: Denominators: X=%.7f, Y=%.7f, Z=%.7f\n", (double)den_x, (double)den_y, (double)den_z); // Optional debug
+
+					// Prevent division by zero or near-zero
+					if (fabsf(den_x) < 1e-6f || fabsf(den_y) < 1e-6f || fabsf(den_z) < 1e-6f) {
+						printk("Error: Invalid input degrees leading to division by zero. Calibration not applied.\n");
+					} else {
+						//printk("Debug: Denominators seem valid.\n"); // Optional debug
+
+						// Calculate the scale factors
+						scale_x = 1.0f / den_x;
+						scale_y = 1.0f / den_y;
+						scale_z = 1.0f / den_z;
+
+						//printk("Debug: Calculated scales: X=%.7f, Y=%.7f, Z=%.7f\n", (double)scale_x, (double)scale_y, (double)scale_z);
+
+						// *** Assign calculated scales to the retained structure ***
+						//printk("Debug: Assigning scales to retained struct...\n");
+						retained->gyroSensScale[0] = scale_x;
+						retained->gyroSensScale[1] = scale_y;
+						retained->gyroSensScale[2] = scale_z;
+						printk("Debug: Assigned. retained->gyroSensScale = %.7f, %.7f, %.7f\n",
+								(double)retained->gyroSensScale[0], (double)retained->gyroSensScale[1], (double)retained->gyroSensScale[2]);
+
+						// *** Save the updated retained data ***
+						retained_update(); // Save changes
+						//printk("Debug: retained_update() called.\n");
+
+						printk("Gyro sensitivity scale set to: %.5f, %.5f, %.5f\n", (double)scale_x, (double)scale_y, (double)scale_z);
+					}
+				} else {
+					printk("Error: Retained data not available.\n");
+				}
+
+					}
+				} else {
+					printk("Error: Invalid format. Use: sens <x>,<y>,<z>\n");
+					printk("Example: sens 10.5,-2.1,15.0\n");
+					//printk("Debug: Failed during manual parsing. Tokens found: %d\n", token_count);
+					//printk("Debug: String segment being parsed when failed (approx): %s\n", token ? token : "NULL");
+				}
+			}	
 #if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 		else if (memcmp(line, command_6_side, sizeof(command_6_side)) == 0)
 		{

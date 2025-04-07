@@ -41,6 +41,10 @@ bool retained_validate(void)
 	/* If the CRC isn't valid, reset the retained data. */
 	if (!valid) {
 		memset(retained, 0, sizeof(struct retained_data));
+	
+		retained->gyroSensScale[0] = 1.0f;
+		retained->gyroSensScale[1] = 1.0f;
+		retained->gyroSensScale[2] = 1.0f;
 	}
 
 	/* Reset to accrue runtime from this session. */
