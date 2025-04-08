@@ -675,9 +675,6 @@ void main_imu_thread(void)
 						g[0] *= retained->gyroSensScale[0];
 						g[1] *= retained->gyroSensScale[1];
 						g[2] *= retained->gyroSensScale[2];
-					} else {
-						// Log error or proceed without scaling if retained data is somehow unavailable
-						// LOG_ERR("Retained data pointer is NULL in sensor thread! Skipping gyro sensitivity scaling.");
 					}
 	
 	
