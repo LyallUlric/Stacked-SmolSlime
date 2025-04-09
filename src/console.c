@@ -52,6 +52,8 @@ static const struct device *gpio_dev = DEVICE_DT_GET(DT_NODELABEL(gpio0));
 #endif
 
 static const char *meows[] = {
+	"Mew",
+	"Meww",
 	"Meow",
 	"Meow meow",
 	"Mrrrp",
@@ -60,6 +62,8 @@ static const char *meows[] = {
 	"Mrrrow",
 	"Mrrr",
 	"Purr",
+	"mew",
+	"meww",
 	"meow",
 	"meow meow",
 	"mrrrp",
