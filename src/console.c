@@ -285,7 +285,7 @@ static void console_thread(void)
 	printk("meow                         Meow!\n");
 
 	uint8_t command_meow[] = "meow";
-	uint8_t command_sens[] = "sens ";
+	uint8_t command_sens[] = "sens";
 	uint8_t command_sens_reset[] = "sens reset";
 
 	while (1) {
@@ -326,7 +326,7 @@ static void console_thread(void)
 					retained->gyroSensScale[1] = 1.0f;
 					retained->gyroSensScale[2] = 1.0f;
 					retained_update(); // Save changes
-					printk("Gyro sensitivity reset to 1.0, 1.0, 1.0\n");
+					printk("Gyro sensitivity reset to 0, 0, 0\n");
 				} else {
 					printk("Error: Retained data not available.\n");
 				}
@@ -361,9 +361,9 @@ static void console_thread(void)
 								// For the last token, endptr must point to the null terminator
 								if (*endptr == '\0') {
 									token_count++;
-									parse_ok = true;
+										parse_ok = true;
+									}
 								}
-							}
 						}
 						}
 					}
@@ -395,14 +395,18 @@ static void console_thread(void)
 
 						printk("Gyro sensitivity scale set to: %.3f, %.3f, %.3f\n", (double)deg_x, (double)deg_y, (double)deg_z);
 					}
-				} 
+				}
 
-					}
+					
 				} else {
 					printk("Error: Invalid format. Use: sens <x>,<y>,<z>\n");
 					printk("Example: sens 10.5,-2.1,15.0\n");
-				}
-			}	
+				}  
+				} else {
+					printk("Error: Invalid format. Use: sens <x>,<y>,<z>\n");
+					printk("Example: sens 10.5,-2.1,15.0\n");
+			}
+			}
 #if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 		else if (memcmp(line, command_6_side, sizeof(command_6_side)) == 0)
 		{
