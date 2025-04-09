@@ -12,11 +12,6 @@
 static uint8_t accel_fs = DSO_FS_XL_16G;
 static uint8_t gyro_fs = DSO_FS_G_2000DPS;
 
-static uint8_t last_accel_mode = 0xff;
-static uint8_t last_gyro_mode = 0xff;
-static uint8_t last_accel_odr = 0xff;
-static uint8_t last_gyro_odr = 0xff;
-
 static uint8_t ext_addr = 0xff;
 static uint8_t ext_reg = 0xff;
 static bool use_ext_fifo = false;
@@ -28,7 +23,6 @@ int lsm6dso_init(float clock_rate, float accel_time, float gyro_time, float *acc
 	// setup interface for SPI
 	sensor_interface_spi_configure(SENSOR_INTERFACE_DEV_IMU, MHZ(10), 0);
 	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSO_CTRL3, 0x44); // freeze register until done reading, increment register address during multi-byte access (BDU, IF_INC)
-//	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSO_CTRL8, 0x00); // Old mode (allows 16g) | XL_FS_MODE = 0
 	if (err)
 		LOG_ERR("Communication error");
 	last_accel_odr = 0xff; // reset last odr
@@ -40,15 +34,6 @@ int lsm6dso_init(float clock_rate, float accel_time, float gyro_time, float *acc
 //	if (use_ext_fifo)
 //		err |= lsm_ext_init(ext_addr, ext_reg);
 	return (err < 0 ? err : 0);
-}
-
-void lsm6dso_shutdown(void)
-{
-	last_accel_odr = 0xff; // reset last odr
-	last_gyro_odr = 0xff; // reset last odr
-	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSO_CTRL3, 0x01); // SW_RESET
-	if (err)
-		LOG_ERR("Communication error");
 }
 
 void lsm6dso_update_fs(float accel_range, float gyro_range, float *accel_actual_range, float *gyro_actual_range)
@@ -346,7 +331,7 @@ int lsm6dso_ext_setup(uint8_t addr, uint8_t reg)
 
 const sensor_imu_t sensor_imu_lsm6dso = {
 	*lsm6dso_init,
-	*lsm6dso_shutdown,
+	*lsm_shutdown,
 
 	*lsm6dso_update_fs,
 	*lsm6dso_update_odr,

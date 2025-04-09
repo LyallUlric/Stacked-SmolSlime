@@ -19,8 +19,6 @@ static uint8_t last_gyro_odr = 0xff;
 static const float clock_reference = 32000;
 static float clock_scale = 1; // ODR is scaled by clock_rate/clock_reference
 
-static bool fifo_primed = false;
-
 #define FIFO_MULT 0.00075f // assuming i2c fast mode
 
 static float fifo_multiplier = 0;
@@ -31,8 +29,6 @@ int icm45_init(float clock_rate, float accel_time, float gyro_time, float *accel
 {
 	// setup interface for SPI
 	sensor_interface_spi_configure(SENSOR_INTERFACE_DEV_IMU, MHZ(24), 0);
-	// special handling of unknown fifo corruption
-	fifo_primed = false;
 	int err = 0;
 	if (clock_rate > 0)
 	{
@@ -51,7 +47,7 @@ int icm45_init(float clock_rate, float accel_time, float gyro_time, float *accel
 	err |= icm45_update_odr(accel_time, gyro_time, accel_actual_time, gyro_actual_time);
 //	k_msleep(50); // 10ms Accel, 30ms Gyro startup
 	k_msleep(1); // fuck i dont wanna wait that long
-	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, ICM45686_FIFO_CONFIG0, 0x40 | 0b000111); // set FIFO Stream mode, set FIFO depth to 2K bytes
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, ICM45686_FIFO_CONFIG0, 0x80 | 0b000111); // set FIFO stop-on-full mode, set FIFO depth to 2K bytes (see AN-000364)
 	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, ICM45686_FIFO_CONFIG3, 0x0F); // begin FIFO stream, hires, a+g
 	if (err)
 		LOG_ERR("Communication error");
@@ -264,8 +260,6 @@ int icm45_update_odr(float accel_time, float gyro_time, float *accel_actual_time
 	return 0;
 }
 
-static const uint8_t empty[PACKET_SIZE] = {[0 ... PACKET_SIZE - 1] = 0x7f};
-
 uint16_t icm45_fifo_read(uint8_t *data, uint16_t len) // TODO: check if working
 {
 	int err = 0;
@@ -288,32 +282,6 @@ uint16_t icm45_fifo_read(uint8_t *data, uint16_t len) // TODO: check if working
 		err |= ssi_burst_read_interval(SENSOR_INTERFACE_DEV_IMU, ICM45686_FIFO_DATA, data, count, 240); // Read FIFO data, less than 255 at a time (for nRF52832)
 		if (err)
 			LOG_ERR("Communication error");
-		// specially handle packet error from unknown fifo corruption
-		for (int i = 0; i < packets; i++)
-		{
-			// header should initially be 0x00, and 0x78 once data is being written correctly
-			if (!fifo_primed && data[i * PACKET_SIZE] == 0x78) // wait for first valid packet
-			{
-				LOG_INF("FIFO ready");
-				fifo_primed = true;
-			}
-			else if (data[i * PACKET_SIZE] != 0x78 && fifo_primed) // immediately reset fifo on invalid packet
-			{
-				if (!memcmp(&data[i * PACKET_SIZE], empty, PACKET_SIZE)) // skip if read empty packet
-					continue;
-				LOG_ERR("FIFO error on packet %d/%d", i, packets);
-				LOG_INF("Header: 0x%02X", data[i * PACKET_SIZE]);
-				fifo_primed = false;
-				err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, ICM45686_FIFO_CONFIG3, 0x00); // stop FIFO
-				err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, ICM45686_FIFO_CONFIG0, 0x00); // reset FIFO config
-				err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, ICM45686_FIFO_CONFIG0, 0x40 | 0b000111); // set FIFO Stream mode, set FIFO depth to 2K bytes
-				err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, ICM45686_FIFO_CONFIG3, 0x0F); // begin FIFO stream, hires, a+g
-			}
-			else if (!fifo_primed)
-			{
-				LOG_INF("Current header: 0x%02X", data[i * PACKET_SIZE]);
-			}
-		}
 		data += packets * PACKET_SIZE;
 		len -= packets * PACKET_SIZE;
 		total += packets;

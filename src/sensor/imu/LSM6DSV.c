@@ -15,10 +15,11 @@ float gyro_sensitivity = 0.070f; // Default 2000dps (FS = ±2000 dps: 70 mdps/LS
 static uint8_t accel_fs = FS_XL_16G;
 static uint8_t gyro_fs = FS_G_2000DPS;
 
-static uint8_t last_accel_mode = 0xff;
-static uint8_t last_gyro_mode = 0xff;
-static uint8_t last_accel_odr = 0xff;
-static uint8_t last_gyro_odr = 0xff;
+// TODO: shared with LSM
+uint8_t last_accel_mode = 0xff;
+uint8_t last_gyro_mode = 0xff;
+uint8_t last_accel_odr = 0xff;
+uint8_t last_gyro_odr = 0xff;
 
 static uint8_t ext_addr = 0xff;
 static uint8_t ext_reg = 0xff;

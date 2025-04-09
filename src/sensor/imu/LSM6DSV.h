@@ -79,6 +79,11 @@
 extern float accel_sensitivity; // Default 16G (FS = ±16 g: 0.488 mg/LSB)
 extern float gyro_sensitivity; // Default 2000dps (FS = ±2000 dps: 70 mdps/LSB)
 
+extern uint8_t last_accel_mode;
+extern uint8_t last_gyro_mode;
+extern uint8_t last_accel_odr;
+extern uint8_t last_gyro_odr;
+
 int lsm_init(float clock_rate, float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time);
 void lsm_shutdown(void);
 

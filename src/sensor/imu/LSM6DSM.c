@@ -9,17 +9,8 @@
 
 #define PACKET_SIZE 7 // first byte is pattern, only 6 actual sample bytes
 
-// TODO: shared with LSM
-//static float accel_sensitivity = 16.0f / 32768.0f; // Default 16G (FS = ±16 g: 0.488 mg/LSB)
-//static float gyro_sensitivity = 0.070f; // Default 2000dps (FS = ±2000 dps: 70 mdps/LSB)
-
 static uint8_t accel_fs = DSM_FS_XL_16G;
 static uint8_t gyro_fs = DSM_FS_G_2000DPS;
-
-static uint8_t last_accel_mode = 0xff;
-static uint8_t last_gyro_mode = 0xff;
-static uint8_t last_accel_odr = 0xff;
-static uint8_t last_gyro_odr = 0xff;
 
 static uint8_t ext_addr = 0xff;
 static uint8_t ext_reg = 0xff;
@@ -45,15 +36,6 @@ int lsm6dsm_init(float clock_rate, float accel_time, float gyro_time, float *acc
 //	if (use_ext_fifo)
 //		err |= lsm_ext_init(ext_addr, ext_reg);
 	return (err < 0 ? err : 0);
-}
-
-void lsm6dsm_shutdown(void)
-{
-	last_accel_odr = 0xff; // reset last odr
-	last_gyro_odr = 0xff; // reset last odr
-	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSM_CTRL3, 0x01); // SW_RESET
-	if (err)
-		LOG_ERR("Communication error");
 }
 
 void lsm6dsm_update_fs(float accel_range, float gyro_range, float *accel_actual_range, float *gyro_actual_range)
@@ -410,7 +392,7 @@ int lsm6dsm_ext_setup(uint8_t addr, uint8_t reg)
 
 const sensor_imu_t sensor_imu_lsm6dsm = {
 	*lsm6dsm_init,
-	*lsm6dsm_shutdown,
+	*lsm_shutdown,
 
 	*lsm6dsm_update_fs,
 	*lsm6dsm_update_odr,

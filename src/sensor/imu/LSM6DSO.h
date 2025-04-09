@@ -58,7 +58,6 @@
 #define DSO_OP_MODE_G_SLEEP 0x40 // Gyro sleep
 
 int lsm6dso_init(float clock_rate, float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time);
-void lsm6dso_shutdown(void);
 
 void lsm6dso_update_fs(float accel_range, float gyro_range, float *accel_actual_range, float *gyro_actual_range);
 int lsm6dso_update_odr(float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time);
