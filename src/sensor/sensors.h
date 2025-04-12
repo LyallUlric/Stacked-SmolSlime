@@ -114,6 +114,8 @@ const int i2c_dev_imu[] = {
 const char *dev_mag_names[] = {
 	"HMC5883L",
 	"QMC5883L",
+	"QMC6309",
+	"QMC6310",
 	"AK8963",
 	"AK09916",
 	"AK09940",
@@ -136,6 +138,8 @@ const sensor_mag_t *sensor_mags[] = {
 	&sensor_mag_none, // not implemented
 	&sensor_mag_none,
 	&sensor_mag_none,
+	&sensor_mag_none,
+	&sensor_mag_none,
 	&sensor_mag_ak09940,
 	&sensor_mag_bmm150,
 	&sensor_mag_bmm350,
@@ -151,68 +155,85 @@ const sensor_mag_t *sensor_mags[] = {
 	&sensor_mag_none,
 	&sensor_mag_mmc5983ma
 };
-const int i2c_dev_mag_addr_count = 9;
+const int i2c_dev_mag_addr_count = 11;
 const uint8_t i2c_dev_mag_addr[] = {
-	1,	0x0B,
 	1,	0x0C,
-	3,	0x0D,0x0E,0x0F,
+	1,	0x0D,
+	2,	0x0E,0x0F,
 	4,	0x10,0x11,0x12,0x13, // why bosch
 	4,	0x14,0x15,0x16,0x17,
 	1,	0x19,
 	1,	0x1C,
 	1,	0x1E,
-	1,	0x30
+	1,	0x30,
+	1,	0x3C,
+	1,	0x7C
 };
 const uint8_t i2c_dev_mag_reg[] = {
-	1,	0x0D,
 	2,	0x01, // AK09916/AK09940 first
 		0x00,
+	3,	0x01, // AK09940 first
+		0x00,
+		0x0D,
 	2,	0x01, // AK09940 first
 		0x00,
 	1,	0x40,
 	1,	0x00,
 	1,	0x00,
-	1,	0x0F,
-	3,	0x0F,
+	2,	0x00,
+		0x0F,
+	3,	0x0A,
+		0x0F,
 		0x4F,
-		0x0A,
 	3,	0x20,
 		0x2F,
-		0x39
+		0x39,
+	1,	0x00,
+	1,	0x00
 };
 const uint8_t i2c_dev_mag_id[] = {
-	1,	0xFF, // reg 0x0D
 	2,	0x09,0xA3, // reg 0x01
 	2,	0x08,0x48, // reg 0x00
 	1,	0xA3, // reg 0x01
 	2,	0x08,0x48, // reg 0x00
+	1,	0xFF, // reg 0x0D
+	1,	0xA3, // reg 0x01
+	2,	0x08,0x48, // reg 0x00
 	1,	0x32, // reg 0x40
 	1,	0x33, // reg 0x00
-	1,	0x06, // reg 0x00
+	3,	0x06,0x20,0x21, // reg 0x00
+	1,	0x80, // reg 0x00
 	1,	0x3D, // reg 0x0F
+	1,	0x48, // reg 0x0A
 	1,	0x3D, // reg 0x0F
 	1,	0x40, // reg 0x4F
-	1,	0x48, // reg 0x0A
 	1,	0x06, // reg 0x20
 	2,	0x0A,0x30, // reg 0x2F
-	2,	0x10,0x11 // reg 0x39
+	2,	0x10,0x11, // reg 0x39
+	1,	0x80, // reg 0x00
+	1,	0x90 // reg 0x00
 };
 const int i2c_dev_mag[] = {
-	MAG_QMC5883L,
 	MAG_AK09916, MAG_AK09940,
 	MAG_IST8308, MAG_AK8963,
 	MAG_AK09940,
 	MAG_IST8308, MAG_AK8963,
+	MAG_QMC5883L,
+	MAG_AK09940,
+	MAG_IST8308, MAG_AK8963,
 	MAG_BMM150,
 	MAG_BMM350,
-	MAG_IST8306,
+	MAG_IST8306, MAG_IST8320, MAG_IST8321,
+	MAG_QMC6310,
 	MAG_LIS3MDL,
+	MAG_HMC5883L,
 	MAG_LIS3MDL,
 	MAG_LIS2MDL,
-	MAG_HMC5883L,
 	MAG_MMC34160PJ,
 	MAG_MMC3630KJ, MAG_MMC5983MA,
-	MAG_MMC5633NJL, MAG_MMC5616WA
+	MAG_MMC5633NJL, MAG_MMC5616WA,
+	MAG_QMC6310,
+	MAG_QMC6309
 };
 
 int sensor_scan_imu(struct i2c_dt_spec *i2c_dev, uint8_t *i2c_dev_reg)
