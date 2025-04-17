@@ -43,6 +43,7 @@
 #include "mag/LIS2MDL.h"
 #include "mag/LIS3MDL.h"
 #include "mag/MMC5983MA.h"
+#include "mag/QMC6309.h"
 
 #include "scan.h"
 #include "scan_spi.h"
@@ -134,25 +135,25 @@ const char *dev_mag_names[] = {
 	"MMC5983MA"
 };
 const sensor_mag_t *sensor_mags[] = {
-	&sensor_mag_none, // will not implement, too low quality
-	&sensor_mag_none, // not implemented
-	&sensor_mag_none,
-	&sensor_mag_none,
-	&sensor_mag_none,
-	&sensor_mag_none,
+	&sensor_mag_none, // HMC5883 will not implement, too low quality
+	&sensor_mag_none, // QMC5883 not implemented
+	&sensor_mag_qmc6309,
+	&sensor_mag_none, // QMC6310
+	&sensor_mag_none, // AK8963
+	&sensor_mag_none, // AK09916
 	&sensor_mag_ak09940,
 	&sensor_mag_bmm150,
 	&sensor_mag_bmm350,
 	&sensor_mag_ist8306,
 	&sensor_mag_ist8308,
-	&sensor_mag_none,
-	&sensor_mag_none,
+	&sensor_mag_none, // IST8320
+	&sensor_mag_none, // IST8321
 	&sensor_mag_lis2mdl,
 	&sensor_mag_lis3mdl,
-	&sensor_mag_none,
-	&sensor_mag_none,
-	&sensor_mag_none,
-	&sensor_mag_none,
+	&sensor_mag_none, // MMC34160
+	&sensor_mag_none, // MMC3630
+	&sensor_mag_none, // MMC5603/MMC5633
+	&sensor_mag_none, // MMC5616
 	&sensor_mag_mmc5983ma
 };
 const int i2c_dev_mag_addr_count = 11;

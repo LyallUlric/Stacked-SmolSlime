@@ -241,6 +241,7 @@ static void power_thread(void)
 
 		bool abnormal_reading = battery_mV < 100 || battery_mV > 6000;
 		bool battery_available = battery_mV > 1500 && !abnormal_reading; // Keep working without the battery connected, otherwise it is obviously too dead to boot system
+		bool battery_discharged = battery_available && battery_pptt == 0;
 		// Separate detection of vin
 		if (!plugged && battery_mV > 4300 && !abnormal_reading) {
 			plugged = true;
@@ -263,7 +264,9 @@ static void power_thread(void)
 			power_init = true;
 		}
 
-		if ((battery_available && battery_pptt == 0) || docked) {
+		if (battery_discharged || docked) {
+			if (battery_discharged)
+				LOG_WRN("Discharged battery");
 			sys_request_system_off();
 		}
 
