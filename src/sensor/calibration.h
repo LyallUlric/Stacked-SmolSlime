@@ -57,6 +57,6 @@ void sensor_request_calibration_6_side(void);
 void sensor_request_calibration_mag(void);
 
 int sensor_offsetBias(float *dest1, float *dest2);
-void sensor_6_sideBias();
+int sensor_6_sideBias();
 
 #endif

@@ -533,6 +533,7 @@ void main_imu_thread(void)
 	main_running = true;
 	int err = main_imu_init(); // Initialize IMUs and Fusion
 	// TODO: handle imu init error, maybe restart device?
+	// TODO: on failure to init, disable sensor interface
 	if (err)
 		set_status(SYS_STATUS_SENSOR_ERROR, true); // TODO: only handles general init error
 	else

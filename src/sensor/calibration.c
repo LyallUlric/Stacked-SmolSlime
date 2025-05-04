@@ -54,11 +54,17 @@ static void calibration_thread(void);
 K_THREAD_DEFINE(calibration_thread_id, 1024, calibration_thread, NULL, NULL, NULL, 6, 0, 0);
 
 static void sensor_sample_accel(const float a[3]);
-static void sensor_wait_accel(float a[3]);
+static int sensor_wait_accel(float a[3], k_timeout_t timeout);
+
 static void sensor_sample_gyro(const float g[3]);
-static void sensor_wait_gyro(float g[3]);
+static int sensor_wait_gyro(float g[3], k_timeout_t timeout);
+
 static void sensor_sample_mag(const float m[3]);
-static void sensor_wait_mag(float m[3]);
+static int sensor_wait_mag(float m[3], k_timeout_t timeout);
+
+#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
+static void magneto_reset(void);
+#endif
 
 void sensor_calibration_process_accel(float a[3])
 {
@@ -106,12 +112,14 @@ bool wait_for_motion(bool motion, int samples)
 {
 	uint8_t counts = 0;
 	float a[3], last_a[3];
-	sensor_wait_accel(last_a);
+	if (sensor_wait_accel(last_a, K_MSEC(1000)))
+		return false;
 	LOG_INF("Accelerometer: %.5f %.5f %.5f", (double)last_a[0], (double)last_a[1], (double)last_a[2]);
 	for (int i = 0; i < samples + counts; i++)
 	{
 		k_msleep(500);
-		sensor_wait_accel(a);
+		if (sensor_wait_accel(a, K_MSEC(1000)))
+			return false;
 		LOG_INF("Accelerometer: %.5f %.5f %.5f", (double)a[0], (double)a[1], (double)a[2]);
 		if (v_epsilon(a, last_a, 0.1) != motion)
 		{
@@ -179,9 +187,11 @@ void sensor_calibrate_imu()
 
 	LOG_INF("Reading data");
 	sensor_calibration_clear();
-	if (sensor_offsetBias(accelBias, gyroBias)) // This takes about 3s
+	int err = sensor_offsetBias(accelBias, gyroBias);
+	if (err) // This takes about 3s
 	{
-		LOG_INF("Motion detected");
+		if (err == -1)
+			LOG_INF("Motion detected");
 		accelBias[0] = NAN; // invalidate calibration
 	}
 	else
@@ -221,11 +231,21 @@ void sensor_calibrate_6_side(void)
 	LOG_INF("Rest the device on a stable surface");
 
 	sensor_calibration_clear_6_side();
-	sensor_6_sideBias();
-	sys_write(MAIN_ACC_6_BIAS_ID, &retained->accBAinv, accBAinv, sizeof(accBAinv));
-	LOG_INF("Accelerometer matrix:");
-	for (int i = 0; i < 3; i++)
-		LOG_INF("%.5f %.5f %.5f %.5f", (double)accBAinv[0][i], (double)accBAinv[1][i], (double)accBAinv[2][i], (double)accBAinv[3][i]);
+	int err = sensor_6_sideBias();
+	if (err)
+	{
+		magneto_reset();
+		if (err == -1)
+			LOG_INF("Motion detected");
+		accBAinv[0][0] = NAN; // invalidate calibration
+	}
+	else
+	{
+		sys_write(MAIN_ACC_6_BIAS_ID, &retained->accBAinv, accBAinv, sizeof(accBAinv));
+		LOG_INF("Accelerometer matrix:");
+		for (int i = 0; i < 3; i++)
+			LOG_INF("%.5f %.5f %.5f %.5f", (double)accBAinv[0][i], (double)accBAinv[1][i], (double)accBAinv[2][i], (double)accBAinv[3][i]);
+	}
 	if (sensor_calibration_validate_6_side())
 	{
 		set_led(SYS_LED_PATTERN_OFF, SYS_LED_PRIORITY_SENSOR);
@@ -255,13 +275,20 @@ static void sensor_sample_accel(const float a[3])
 		k_usleep(1); // yield to waiting thread
 }
 
-static void sensor_wait_accel(float a[3])
+static int sensor_wait_accel(float a[3], k_timeout_t timeout)
 {
+	int64_t sample_end_time = MAX(k_uptime_ticks() + timeout.ticks, timeout.ticks);
 	accel_wait_sample = accel_sample;
-	while (accel_sample <= accel_wait_sample)
+	while (accel_sample <= accel_wait_sample && k_uptime_ticks() < sample_end_time)
 		k_usleep(1);
 	accel_wait_sample = 0;
+	if (k_uptime_ticks() >= sample_end_time)
+	{
+		LOG_ERR("Accelerometer wait timed out");
+		return -1;
+	}
 	memcpy(a, aBuf, sizeof(aBuf));
+	return 0;
 }
 
 static float gBuf[3] = {0};
@@ -276,13 +303,20 @@ static void sensor_sample_gyro(const float g[3])
 		k_usleep(1); // yield to waiting thread
 }
 
-static void sensor_wait_gyro(float g[3])
+static int sensor_wait_gyro(float g[3], k_timeout_t timeout)
 {
+	int64_t sample_end_time = MAX(k_uptime_ticks() + timeout.ticks, timeout.ticks);
 	gyro_wait_sample = gyro_sample;
-	while (gyro_sample <= gyro_wait_sample)
+	while (gyro_sample <= gyro_wait_sample && k_uptime_ticks() < sample_end_time)
 		k_usleep(1);
 	gyro_wait_sample = 0;
+	if (k_uptime_ticks() >= sample_end_time)
+	{
+		LOG_ERR("Gyroscope wait timed out");
+		return -1;
+	}
 	memcpy(g, gBuf, sizeof(gBuf));
+	return 0;
 }
 
 static float mBuf[3] = {0};
@@ -297,13 +331,20 @@ static void sensor_sample_mag(const float m[3])
 		k_usleep(1); // yield to waiting thread
 }
 
-static void sensor_wait_mag(float m[3])
+static int sensor_wait_mag(float m[3], k_timeout_t timeout)
 {
+	int64_t sample_end_time = MAX(k_uptime_ticks() + timeout.ticks, timeout.ticks);
 	mag_wait_sample = mag_sample;
-	while (mag_sample <= mag_wait_sample)
+	while (mag_sample <= mag_wait_sample && k_uptime_ticks() < sample_end_time)
 		k_usleep(1);
 	mag_wait_sample = 0;
+	if (k_uptime_ticks() >= sample_end_time)
+	{
+		LOG_ERR("Magnetometer wait timed out");
+		return -1;
+	}
 	memcpy(m, mBuf, sizeof(mBuf));
+	return 0;
 }
 
 static int check_sides(const float *a)
@@ -344,7 +385,8 @@ int sensor_calibrate_mag(void)
 		return -1; // magnetometer calibration already exists
 
 	float m[3];
-	sensor_wait_mag(m);
+	if (sensor_wait_mag(m, K_MSEC(1000)))
+		return -1; // Timeout
 	sensor_sample_mag_magneto_sample(aBuf, m); // 400us
 	if (mag_progress != 0b11111111)
 		return 0;
@@ -500,20 +542,23 @@ void sensor_request_calibration_mag(void)
 int sensor_offsetBias(float *dest1, float *dest2)
 {
 	float rawData[3], last_a[3];
-	sensor_wait_accel(last_a);
+	if (sensor_wait_accel(last_a, K_MSEC(1000)))
+		return -2; // Timeout
 	int64_t sampling_start_time = k_uptime_get();
 	int i = 0;
 	while (k_uptime_get() < sampling_start_time + 3000)
 	{
-		sensor_wait_accel(rawData);
+		if (sensor_wait_accel(rawData, K_MSEC(1000)))
+			return -2; // Timeout
 		if (!v_epsilon(rawData, last_a, 0.1))
-			return -1;
+			return -1; // Motion detected
 #if !CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 		dest1[0] += rawData[0];
 		dest1[1] += rawData[1];
 		dest1[2] += rawData[2];
 #endif
-		sensor_wait_gyro(rawData);
+		if (sensor_wait_gyro(rawData, K_MSEC(1000)))
+			return -2; // Timeout
 		dest2[0] += rawData[0];
 		dest2[1] += rawData[1];
 		dest2[2] += rawData[2];
@@ -564,8 +609,18 @@ static int isAccRest(float *acc, float *pre_acc, float threshold, int *t, int re
 	return 0;
 }
 
+static void magneto_reset(void)
+{	
+	mag_progress = 0; // reusing ata, so guarantee cleared mag progress
+	last_mag_progress = 0;
+	mag_progress_time = 0;
+	memset(ata, 0, sizeof(ata));
+	norm_sum = 0;
+	sample_count = 0;
+}
+
 // TODO: can be used to get a better gyro bias
-void sensor_6_sideBias(void)
+int sensor_6_sideBias(void)
 {
 	// Acc 6 side calibrate
 	float rawData[3];
@@ -574,12 +629,7 @@ void sensor_6_sideBias(void)
 	const float THRESHOLD_ACC = 0.05;
 	int resttime = 0;
 
-	mag_progress = 0; // reusing ata, so guarantee cleared mag progress
-	last_mag_progress = 0;
-	mag_progress_time = 0;
-	memset(ata, 0, sizeof(ata));
-	norm_sum = 0;
-	sample_count = 0;
+	magneto_reset();
 	int c = 0;
 	printk("Starting accelerometer calibration.\n");
 	while (1)
@@ -588,7 +638,8 @@ void sensor_6_sideBias(void)
 		printk("Waiting for a resting state...\n");
 		while (1)
 		{
-			sensor_wait_accel(rawData);
+			if (sensor_wait_accel(rawData, K_MSEC(1000)))
+				return -2; // Timeout, magneto state not handled here
 			int rest = isAccRest(rawData, pre_acc, THRESHOLD_ACC, &resttime, 100);
 			pre_acc[0] = rawData[0];
 			pre_acc[1] = rawData[1];
@@ -620,7 +671,10 @@ void sensor_6_sideBias(void)
 				uint8_t i = 0;
 				while (k_uptime_get() < sampling_start_time + 1000)
 				{
-					sensor_wait_accel(rawData);
+					if (sensor_wait_accel(rawData, K_MSEC(1000)))
+						return -2; // Timeout, magneto state not handled here
+					if (!v_epsilon(rawData, pre_acc, 0.1))
+						return -1; // Motion detected
 					magneto_sample(rawData[0], rawData[1], rawData[2], ata, &norm_sum, &sample_count);
 					if (k_uptime_get() >= sampling_start_time + i * 100)
 					{
@@ -641,7 +695,8 @@ void sensor_6_sideBias(void)
 		while (1)
 		{
 			k_msleep(100);
-			sensor_wait_accel(rawData);
+			if (sensor_wait_accel(rawData, K_MSEC(1000)))
+				return -2; // Timeout, magneto state not handled here
 			int rest = isAccRest(rawData, pre_acc, THRESHOLD_ACC, &resttime, 100);
 			pre_acc[0] = rawData[0];
 			pre_acc[1] = rawData[1];
@@ -653,16 +708,14 @@ void sensor_6_sideBias(void)
 				break;
 			}
 		}
-		k_msleep(5);
 	}
-	mag_progress = 0; // reusing ata, so guarantee cleared mag progress
-	last_mag_progress = 0;
-	mag_progress_time = 0;
 
 	printk("Calculating the data....\n");
 	magneto_current_calibration(accBAinv, ata, norm_sum, sample_count);
+	magneto_reset();
 
 	printk("Calibration is complete.\n");
+	return 0;
 }
 #endif
 
@@ -676,7 +729,7 @@ static void calibration_thread(void)
 
 	// Verify calibrations
 	sensor_calibration_validate();
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION 
+#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 	sensor_calibration_validate_6_side();
 #endif
 	sensor_calibration_validate_mag();
@@ -693,12 +746,14 @@ static void calibration_thread(void)
 			sensor_calibration_request(-1); // clear request
 			set_status(SYS_STATUS_CALIBRATION_RUNNING, false);
 			break;
+#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 		case 2:
 			set_status(SYS_STATUS_CALIBRATION_RUNNING, true);
 			sensor_calibrate_6_side();
 			sensor_calibration_request(-1); // clear request
 			set_status(SYS_STATUS_CALIBRATION_RUNNING, false);
 			break;
+#endif
 		default:
 			if (mag_progress & 0b10000000)
 				requested = sensor_calibrate_mag();
