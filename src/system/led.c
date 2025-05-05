@@ -69,6 +69,7 @@ static int led_pattern_state;
 
 static int led_pin_init(void)
 {
+	LOG_DBG("led_pin_init");
 	gpio_pin_configure_dt(&led, GPIO_OUTPUT);
 	gpio_pin_set_dt(&led, 0);
 #if LED0_EXISTS
@@ -94,6 +95,7 @@ SYS_INIT(led_pin_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
 
 static void led_pin_reset(void)
 {
+	LOG_DBG("led_pin_reset");
 	gpio_pin_configure_dt(&led, GPIO_DISCONNECTED);
 #if LED0_EXISTS
 	gpio_pin_configure_dt(&led0, GPIO_DISCONNECTED);
@@ -111,6 +113,7 @@ static void led_pin_reset(void)
 
 static void led_suspend(void)
 {
+	LOG_DBG("led_suspend");
 #ifdef PWM_LED_EXISTS
 	pm_device_action_run(pwm_led.dev, PM_DEVICE_ACTION_SUSPEND);
 #endif
@@ -125,7 +128,7 @@ static void led_suspend(void)
 
 static void led_resume(void)
 {
-	led_pin_init();
+	LOG_DBG("led_resume");
 #ifdef PWM_LED_EXISTS
 	pm_device_action_run(pwm_led.dev, PM_DEVICE_ACTION_RESUME);
 #endif
@@ -135,6 +138,7 @@ static void led_resume(void)
 #ifdef PWM_LED2_EXISTS
 	pm_device_action_run(pwm_led2.dev, PM_DEVICE_ACTION_RESUME);
 #endif
+	led_pin_init();
 }
 
 #ifdef CONFIG_LED_RGB_COLOR
@@ -196,6 +200,7 @@ static int led_pwm_period[4][1] = {
 // TODO: use computed constants for high/low brightness and color values
 static void led_pin_set(enum sys_led_color color, int brightness_pptt, int value_pptt)
 {
+	LOG_DBG("led_pin_set: color %d, brightness %d, value %d", color, brightness_pptt, value_pptt);
 	if (brightness_pptt < 0)
 		brightness_pptt = 0;
 	else if (brightness_pptt > 10000)
@@ -222,6 +227,8 @@ static void led_pin_set(enum sys_led_color color, int brightness_pptt, int value
 
 void set_led(enum sys_led_pattern led_pattern, int priority)
 {
+	LOG_DBG("set_led: current_led_pattern %d, current_priority %d", current_led_pattern, current_priority);
+	LOG_DBG("set_led: pattern %d, priority %d", led_pattern, priority);
 #if LED_EXISTS
 	if (led_pattern <= SYS_LED_PATTERN_OFF && k_current_get() == led_thread_id)
 		led_patterns[current_priority] = led_pattern;
@@ -247,6 +254,7 @@ void set_led(enum sys_led_pattern led_pattern, int priority)
 	else if (k_current_get() != led_thread_id) // do not suspend if called from thread
 	{
 		k_thread_suspend(led_thread_id);
+		led_resume();
 		k_thread_resume(led_thread_id);
 	}
 	else

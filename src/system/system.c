@@ -327,14 +327,14 @@ void sys_user_shutdown(void)
 {
 	LOG_INF("User shutdown requested");
 	reboot_counter_write(0);
-	set_led(SYS_LED_PATTERN_ONESHOT_POWEROFF, SYS_LED_PRIORITY_BOOT);
+	set_led(SYS_LED_PATTERN_ONESHOT_POWEROFF, SYS_LED_PRIORITY_HIGHEST);
 	k_msleep(1500);
 	if (button_read()) // If alternate button is available and still pressed, wait for the user to stop pressing the button
 	{
-		set_led(SYS_LED_PATTERN_LONG, SYS_LED_PRIORITY_BOOT);
+		set_led(SYS_LED_PATTERN_LONG, SYS_LED_PRIORITY_HIGHEST);
 		while (button_read())
 			k_msleep(1);
-		set_led(SYS_LED_PATTERN_OFF_FORCE, SYS_LED_PRIORITY_BOOT);
+		set_led(SYS_LED_PATTERN_OFF_FORCE, SYS_LED_PRIORITY_HIGHEST);
 	}
 	sys_request_system_off();
 }
