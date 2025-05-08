@@ -20,6 +20,8 @@
 #define LSM6DSV_OUTX_L_G                   0x22
 #define LSM6DSV_OUTX_L_A                   0x28
 
+#define LSM6DSV_INTERNAL_FREQ_FINE         0x4F
+
 #define LSM6DSV_FUNCTIONS_ENABLE           0x50
 #define LSM6DSV_TAP_CFG0                   0x56
 #define LSM6DSV_WAKE_UP_THS                0x5B

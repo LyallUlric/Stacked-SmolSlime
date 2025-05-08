@@ -2,7 +2,7 @@
 
 #include <zephyr/logging/log.h>
 
-//#define DEBUG
+//#define DEBUG true
 
 #if DEBUG
 LOG_MODULE_REGISTER(sensor_interface, LOG_LEVEL_DBG);

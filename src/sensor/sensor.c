@@ -111,6 +111,8 @@ static const sensor_imu_t *sensor_imu = &sensor_imu_none;
 static const sensor_mag_t *sensor_mag = &sensor_mag_none;
 static bool use_ext_fifo = false;
 
+//#define DEBUG true
+
 LOG_MODULE_REGISTER(sensor, LOG_LEVEL_INF);
 
 K_THREAD_DEFINE(main_imu_thread_id, 1024, main_imu_thread, NULL, NULL, NULL, 7, 0, 0);
@@ -528,6 +530,21 @@ static bool send_info = false;
 
 static int packet_errors = 0;
 
+#define ACQUISITION_START_MS 1000
+#define STATUS_INTERVAL_MS 5000
+
+static int64_t last_status_time = 0;
+static int64_t max_loop_time = 0;
+
+#if DEBUG
+static int64_t last_acquisition_time = INT64_MAX;
+static uint64_t total_acquisition_time = 0;
+static uint64_t total_read_packets = 0;
+static uint64_t total_processed_packets = 0;
+static uint64_t total_gyro_samples = 0;
+static uint64_t total_accel_samples = 0;
+#endif
+
 void main_imu_thread(void)
 {
 	main_running = true;
@@ -572,7 +589,18 @@ void main_imu_thread(void)
 			uint8_t* rawData = (uint8_t*)k_malloc(1024);  // Limit FIFO read to 1024 bytes (worst case is ICM 20 byte packet at 1000Hz and 33ms update time)
 			uint16_t packets = sensor_imu->fifo_read(rawData, 1024); // TODO: name this better?
 #endif
-			LOG_DBG("IMU packet count: %u", packets);
+
+			// Debug info
+#if DEBUG
+			int64_t acquisition_time = k_uptime_ticks();
+			bool valid_acquisition = k_uptime_get() > ACQUISITION_START_MS && last_acquisition_time < acquisition_time; // wait before beginning profiling
+			if (valid_acquisition)
+			{
+				total_acquisition_time += acquisition_time - last_acquisition_time;
+				total_read_packets += packets;
+			}
+			last_acquisition_time = acquisition_time;
+#endif
 
 			// Read magnetometer
 			float raw_m[3];
@@ -620,6 +648,10 @@ void main_imu_thread(void)
 				// TODO: split into separate functions
 				if (raw_g[0] != 0 || raw_g[1] != 0 || raw_g[2] != 0)
 				{
+#if DEBUG
+					if (valid_acquisition)
+						total_gyro_samples++;
+#endif
 					sensor_calibration_process_gyro(raw_g);
 					float gx = raw_g[0];
 					float gy = raw_g[1];
@@ -646,6 +678,10 @@ void main_imu_thread(void)
 
 				if (raw_a[0] != 0 || raw_a[1] != 0 || raw_a[2] != 0)
 				{
+#if DEBUG
+					if (valid_acquisition)
+						total_accel_samples++;
+#endif
 					sensor_calibration_process_accel(raw_a);
 					float ax = raw_a[0];
 					float ay = raw_a[1];
@@ -662,6 +698,11 @@ void main_imu_thread(void)
 
 				processed_packets++;
 			}
+
+#if DEBUG
+			if (valid_acquisition)
+				total_processed_packets += processed_packets;
+#endif
 
 			if (mag_available && mag_enabled && sensor_mode == SENSOR_SENSOR_MODE_LOW_NOISE)
 			{
@@ -698,11 +739,7 @@ void main_imu_thread(void)
 					sys_request_system_reboot();
 				}
 			}
-			else if (processed_packets < packets)
-			{
-				LOG_DBG("Only %u/%u packets processed", processed_packets, packets);
-			}
-			else if (packets > 0)
+			else if (processed_packets == packets && packets > 0)
 			{
 				packet_errors = 0;
 			}
@@ -857,17 +894,36 @@ void main_imu_thread(void)
 			if (mag_available && mag_enabled && last_sensor_mode == SENSOR_SENSOR_MODE_LOW_POWER && sensor_mode == SENSOR_SENSOR_MODE_LOW_POWER)
 				sensor_request_calibration_mag();
 		}
+
 		main_running = false;
 		int64_t time_delta = k_uptime_get() - time_begin;
-		if(time_delta > sensor_update_time_ms)
-			LOG_WRN("Update took %lld ms", time_delta);
+
+		if (time_delta > sensor_update_time_ms)
+			max_loop_time = MAX(max_loop_time, time_delta);
+
+		if (k_uptime_get() - last_status_time > STATUS_INTERVAL_MS)
+		{
+			last_status_time = k_uptime_get();
+			if (max_loop_time > 0)
+			{
+				LOG_WRN("Last update steps took up to %lld ms", time_delta);
+				max_loop_time = 0;
+			}
+#if DEBUG
+			LOG_DBG("packets read: %llu, processed: %llu, gyro samples: %llu, accel samples: %llu, total acquisition time: %lld us", total_read_packets, total_processed_packets, total_gyro_samples, total_accel_samples, k_ticks_to_us_near64(total_acquisition_time));
+			LOG_DBG("reported gyro rate: %.2fHz, actual: %.2fHz, reported accel rate: %.2fHz, actual: %.2fHz", 1.0 / (double)gyro_actual_time, (double)total_gyro_samples / (double)k_ticks_to_us_near64(total_acquisition_time) * 1000000.0, 1.0 / (double)accel_actual_time, (double)total_accel_samples / (double)k_ticks_to_us_near64(total_acquisition_time) * 1000000.0);
+#endif
+		}
+
 //		led_clock_offset += time_delta;
 		if (time_delta > sensor_update_time_ms)
 			k_yield();
 		else
 			k_msleep(sensor_update_time_ms - time_delta);
+
 		if (main_suspended) // TODO:
 			k_thread_suspend(main_imu_thread_id);
+
 		main_running = true;
 	}
 }

@@ -23,6 +23,8 @@
 #define LSM6DSO_WAKE_UP_THS                0x5B
 #define LSM6DSO_MD1_CFG                    0x5E
 
+#define LSM6DSO_INTERNAL_FREQ_FINE         0x63
+
 #define LSM6DSO_FIFO_DATA_OUT_TAG          0x78
 
 #define DSO_FS_G_250DPS  0x00 //0bxxxx0000

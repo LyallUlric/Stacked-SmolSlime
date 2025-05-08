@@ -25,6 +25,8 @@ static uint8_t ext_addr = 0xff;
 static uint8_t ext_reg = 0xff;
 static bool use_ext_fifo = false;
 
+static float freq_scale = 1; // ODR is scaled by INTERNAL_FREQ_FINE
+
 LOG_MODULE_REGISTER(LSM6DSV, LOG_LEVEL_DBG);
 
 int lsm_init(float clock_rate, float accel_time, float gyro_time, float *accel_actual_time, float *gyro_actual_time)
@@ -37,6 +39,9 @@ int lsm_init(float clock_rate, float accel_time, float gyro_time, float *accel_a
 		LOG_ERR("Communication error");
 	last_accel_odr = 0xff; // reset last odr
 	last_gyro_odr = 0xff; // reset last odr
+	int8_t internal_freq_fine;
+	err |= ssi_reg_read_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_INTERNAL_FREQ_FINE, &internal_freq_fine); // affects ODR
+	freq_scale = 1.0f + 0.0013f * (float)internal_freq_fine;
 	err |= lsm_update_odr(accel_time, gyro_time, accel_actual_time, gyro_actual_time);
 	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_FIFO_CTRL4, 0x06); // enable Continuous mode
 	if (err)
@@ -135,6 +140,7 @@ int lsm_update_odr(float accel_time, float gyro_time, float *accel_actual_time, 
 	{
 		OP_MODE_XL = OP_MODE_XL_HP;
 		ODR = 1 / accel_time;
+		ODR /= freq_scale; // scale by internal freq adjustment
 	}
 
 	if (ODR == 0)
@@ -201,6 +207,7 @@ int lsm_update_odr(float accel_time, float gyro_time, float *accel_actual_time, 
 		ODR_XL = ODR_1_875Hz;
 		accel_time = 1.0 / 1.875;
 	}
+	accel_time /= freq_scale; // scale by internal freq adjustment
 
 	// Calculate gyro
 	if (gyro_time <= 0) // off
@@ -220,6 +227,7 @@ int lsm_update_odr(float accel_time, float gyro_time, float *accel_actual_time, 
 		OP_MODE_G = OP_MODE_G_HP;
 		ODR_G = 0; // the compiler complains unless I do this
 		ODR = 1 / gyro_time;
+		ODR /= freq_scale; // scale by internal freq adjustment
 	}
 
 	if (ODR == 0)
@@ -286,6 +294,7 @@ int lsm_update_odr(float accel_time, float gyro_time, float *accel_actual_time, 
 		ODR_G = ODR_1_875Hz;
 		gyro_time = 1.0 / 1.875;
 	}
+	gyro_time /= freq_scale; // scale by internal freq adjustment
 
 	if (last_accel_mode == OP_MODE_XL && last_gyro_mode == OP_MODE_G && last_accel_odr == ODR_XL && last_gyro_odr == ODR_G) // if both were already configured
 		return 1;
