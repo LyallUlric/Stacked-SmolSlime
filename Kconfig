@@ -169,7 +169,7 @@ config USE_ACTIVE_TIMEOUT
     help
         Delay IMU wake up state or user shutdown during activity.
 
-choice 
+choice
     prompt "Activity timeout mode"
     default SLEEP_ON_ACTIVE_TIMEOUT
     depends on USE_ACTIVE_TIMEOUT
@@ -241,7 +241,7 @@ config SENSOR_USE_MAG
 
 config USE_SENSOR_CLOCK
     bool "Use external IMU clock"
-    default y
+    default n
     help
         Use external IMU clock if it is present.
 
