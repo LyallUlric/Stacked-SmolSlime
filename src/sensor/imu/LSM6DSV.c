@@ -507,7 +507,7 @@ int lsm_ext_write_read(const uint8_t addr, const void *write_buf, size_t num_wri
 	uint8_t tmp;
 	err |= ssi_reg_read_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_OUTX_H_A, &tmp); // clear XLDA
 	uint8_t status = 0;
-	int64_t timeout = k_uptime_get() + 10;	
+	int64_t timeout = k_uptime_get() + 10;
 	while ((status & 0x01) && k_uptime_get() < timeout) // XLDA
 		err |= ssi_reg_read_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_STATUS_REG, &status);
 	status = 0;

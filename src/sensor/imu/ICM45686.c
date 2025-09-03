@@ -43,6 +43,13 @@ int icm45_init(float clock_rate, float accel_time, float gyro_time, float *accel
 //		err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, ICM45686_RTC_CONFIG, 0x23); // enable external CLKIN (0x20, default register value is 0x03)
 	}
 	uint8_t ireg_buf[3];
+	ireg_buf[0] = ICM45686_IPREG_BAR; // address is a word, icm is big endian
+	ireg_buf[1] = ICM45686_IPREG_BAR_REG_58;
+	ireg_buf[2] = 0x01; // disable internal pull resistors for AP pins
+	err |= ssi_burst_write(SENSOR_INTERFACE_DEV_IMU, ICM45686_IREG_ADDR_15_8, ireg_buf, 3); // write buffer
+	ireg_buf[1] = ICM45686_IPREG_BAR_REG_59;
+	ireg_buf[2] = 0x00; // disable internal pull resistors for AP pins
+	err |= ssi_burst_write(SENSOR_INTERFACE_DEV_IMU, ICM45686_IREG_ADDR_15_8, ireg_buf, 3); // write buffer
 	ireg_buf[0] = ICM45686_IPREG_TOP1; // address is a word, icm is big endian
 	ireg_buf[1] = ICM45686_SREG_CTRL;
 	ireg_buf[2] = 0x02; // set big endian
@@ -399,11 +406,11 @@ uint8_t icm45_setup_WOM(void) // TODO: check if working
 	return NRF_GPIO_PIN_PULLUP << 4 | NRF_GPIO_PIN_SENSE_LOW; // active low
 }
 
-int icm45_ext_passthrough(bool passthrough) // TODO: might need IOC_PAD_SCENARIO_AUX_OVRD instead
+int icm45_ext_passthrough(bool passthrough)
 {
 	int err = 0;
 	if (passthrough)
-		err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, ICM45686_IOC_PAD_SCENARIO_AUX_OVRD, 0x18); // AUX1_MODE_OVRD, AUX1 in I2CM Bypass, AUX1_ENABLE_OVRD, AUX1 enabled
+		err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, ICM45686_IOC_PAD_SCENARIO_AUX_OVRD, 0x18); // AUX1_MODE_OVRD, AUX1 in I2CM Bypass
 	else
 		err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, ICM45686_IOC_PAD_SCENARIO_AUX_OVRD, 0x00); // disable overrides
 	if (err)

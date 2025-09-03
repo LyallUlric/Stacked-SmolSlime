@@ -42,9 +42,8 @@
  * Front side (facing out) is +Z
  */
 
+// TODO: not matching anymore
 #if defined(CONFIG_BOARD_SLIMEVRMINI_P1_UF2) || defined(CONFIG_BOARD_SLIMEVRMINI_P2_UF2)
-#define SENSOR_GYROSCOPE_AXES_ALIGNMENT gy, -gz, -gx
-#define SENSOR_ACCELEROMETER_AXES_ALIGNMENT ay, -az, -ax
 #define SENSOR_MAGNETOMETER_AXES_ALIGNMENT -mx, mz, -my
 #define SENSOR_QUATERNION_CORRECTION 0.7071f, 0.7071f, 0.0f, 0.0f
 #endif
@@ -59,17 +58,16 @@
 #define SENSOR_QUATERNION_CORRECTION 0.0f, 0.7071f, 0.7071f, 0.0f
 #endif
 
-#ifndef SENSOR_GYROSCOPE_AXES_ALIGNMENT
-#define SENSOR_GYROSCOPE_AXES_ALIGNMENT gx, -gy, -gz // gyro axes alignment to sensor body
-#endif
-#ifndef SENSOR_ACCELEROMETER_AXES_ALIGNMENT
-#define SENSOR_ACCELEROMETER_AXES_ALIGNMENT ax, -ay, -az // accel axes alignment to sensor body
-#endif
 #ifndef SENSOR_MAGNETOMETER_AXES_ALIGNMENT
 #define SENSOR_MAGNETOMETER_AXES_ALIGNMENT my, mx, mz // mag axes alignment to sensor body
 #endif
 #ifndef SENSOR_QUATERNION_CORRECTION
 #define SENSOR_QUATERNION_CORRECTION 0.0f, 0.7071f, 0.7071f, 0.0f // correction quat for sensor to mounting orientation
 #endif
-
+// #ifndef SENSOR_GYROSCOPE_AXES_ALIGNMENT
+// #define SENSOR_GYROSCOPE_AXES_ALIGNMENT gx, -gy, -gz // gyro axes alignment to sensor body
+// #endif
+// #ifndef SENSOR_ACCELEROMETER_AXES_ALIGNMENT
+// #define SENSOR_ACCELEROMETER_AXES_ALIGNMENT ax, -ay, -az // accel axes alignment to sensor body
+// #endif
 #endif
