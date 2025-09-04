@@ -257,7 +257,7 @@ int sensor_scan(void)
 		if (mag_id >= 0)
 			sensor_interface_register_sensor_mag_i2c(&sensor_mag_dev);
 	}
-	if (mag_id < 0 && !(sensor_imu_dev_reg & 0x80)) // I2C IMU
+	if (mag_id < 0 && !(sensor_imu_dev.addr & 0x80)) // I2C IMU
 	{
 		// IMU may support passthrough mode if the magnetometer is connected through the IMU
 		int err = sensor_imu->ext_passthrough(true); // no need to disable, the imu will be reset later
@@ -283,7 +283,7 @@ int sensor_scan(void)
 	}
 #endif
 #if SENSOR_MAG_EXT_EXISTS
-	if (mag_id < 0 && (sensor_imu_dev_reg & 0x80)) // SPI IMU
+	if (mag_id < 0 && (sensor_imu_dev.addr & 0x80)) // SPI IMU
 	{
 		// IMU may support I2CM if the magnetometer is connected through the IMU
 		int err = sensor_imu->ext_setup();
