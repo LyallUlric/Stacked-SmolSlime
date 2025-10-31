@@ -84,6 +84,7 @@ endmenu
 
 config USER_EXTRA_ACTIONS
     bool "Multiple press actions"
+    default y
     help
         Allow user to use multiple presses to calibrate, pair, or enter DFU.
         By default, pairing is available when holding down sw0 for 5 seconds.
@@ -103,7 +104,7 @@ config USER_SHUTDOWN
 
 config USE_IMU_WAKE_UP
     bool "IMU wake up support"
-    default y
+    default n
     help
         Use IMU wake up state if IMU wake up is present.
 
@@ -234,7 +235,7 @@ config SENSOR_GYRO_FS
 
 config SENSOR_USE_MAG
     bool "Magnetometer support"
-    default y
+    default n
     help
         Use magnetometer if it is present.
 
