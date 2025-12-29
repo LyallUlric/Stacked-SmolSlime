@@ -601,7 +601,7 @@ int sensor_offsetBias(float *dest1, float *dest2)
 		return -2; // Timeout
 	int64_t sampling_start_time = k_uptime_get();
 	int i = 0;
-	while (k_uptime_get() < sampling_start_time + 3000)
+	while (k_uptime_get() < sampling_start_time + 9000)
 	{
 		if (sensor_wait_accel(rawData, K_MSEC(1000)))
 			return -2; // Timeout
