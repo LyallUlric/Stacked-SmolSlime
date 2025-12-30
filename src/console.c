@@ -136,13 +136,16 @@ static void print_sensor(void)
 	printk("Address: 0x%02X%02X\n", retained->mag_addr, retained->mag_reg);
 #endif
 
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
-	printk("\nAccelerometer matrix:\n");
-	for (int i = 0; i < 3; i++)
-		printk("%.5f %.5f %.5f %.5f\n", (double)retained->accBAinv[0][i], (double)retained->accBAinv[1][i], (double)retained->accBAinv[2][i], (double)retained->accBAinv[3][i]);
-#else
-	printk("\nAccelerometer bias: %.5f %.5f %.5f\n", (double)retained->accelBias[0], (double)retained->accelBias[1], (double)retained->accelBias[2]);
-#endif
+	if (CONFIG_1_SETTINGS_READ(CONFIG_1_SENSOR_USE_6_SIDE_CALIBRATION))
+	{
+		printk("\nAccelerometer matrix:\n");
+		for (int i = 0; i < 3; i++)
+			printk("%.5f %.5f %.5f %.5f\n", (double)retained->accBAinv[0][i], (double)retained->accBAinv[1][i], (double)retained->accBAinv[2][i], (double)retained->accBAinv[3][i]);
+	}
+	else
+	{
+		printk("\nAccelerometer bias: %.5f %.5f %.5f\n", (double)retained->accelBias[0], (double)retained->accelBias[1], (double)retained->accelBias[2]);
+	}
 	printk("Gyroscope bias: %.5f %.5f %.5f\n", (double)retained->gyroBias[0], (double)retained->gyroBias[1], (double)retained->gyroBias[2]);
 #if SENSOR_MAG_EXISTS
 //	printk("Magnetometer bridge offset: %.5f %.5f %.5f\n", (double)retained->magBias[0], (double)retained->magBias[1], (double)retained->magBias[2]);
@@ -157,7 +160,7 @@ static void print_sensor(void)
 static void print_connection(void)
 {
 	bool paired = retained->paired_addr[0];
-	printk(paired ? "Tracker ID: %u\n" : "\nTracker ID: None\n", retained->paired_addr[1]);
+	printk(paired ? "Tracker ID: %u\n" : "Tracker ID: None\n", retained->paired_addr[1]);
 	printk("Device address: %012llX\n", *(uint64_t *)NRF_FICR->DEVICEADDR & 0xFFFFFFFFFFFF);
 	printk(paired ? "Receiver address: %012llX\n" : "Receiver address: None\n", (*(uint64_t *)&retained->paired_addr[0] >> 16) & 0xFFFFFFFFFFFF);
 }
@@ -318,10 +321,193 @@ static void print_meow(void)
 	printk("%s%s%s\n", meows[meow], meow_punctuations[punctuation], meow_suffixes[suffix]);
 }
 
-static inline void strtolower(char *str) {
-	for(int i = 0; str[i]; i++) {
-		str[i] = tolower(str[i]);
+static int32_t parse_config_settings_id(char *s)
+{
+	int32_t id = parse_i32(s, 10);
+	uint8_t buf[12];
+	snprintk(buf, 12, "%d", id);
+	if (strcmp(buf, s) != 0)
+		return -1;
+	return id;
+}
+
+static int parse_config_settings_write(char *s, int32_t v)
+{
+	int32_t id = parse_config_settings_id(s);
+	uint16_t k = 0;
+	int err = -1;
+	for (int i = 0; i < CONFIG_SETTINGS_COUNT; i++)
+	{
+		for (int j = 0; j < config_settings_count[i]; j++)
+		{
+			if (id < 0 ? strcmp(s, config_settings_names[k]) == 0 : id == k)
+			{
+				switch (i)
+				{
+				case 0:
+					if (v < 0 || v > 1)
+						break;
+					config_0_settings_write(j, v);
+					err = 0;
+					break;
+				case 1:
+					if (v < 0 || v > 1)
+						break;
+					config_1_settings_write(j, v);
+					err = 0;
+					break;
+				case 2:
+					if (v < INT16_MIN || v > INT16_MAX)
+						break;
+					config_2_settings_write(j, v);
+					err = 0;
+					break;
+				case 3:
+					config_3_settings_write(j, v);
+					err = 0;
+					break;
+				default:
+					break;
+				}
+				if (!err)
+					printk("Updated config: %s=%d\n", config_settings_names[k], v);
+				else
+					printk("Invalid value\n");
+				return err;
+			}
+			k++;
+		}
 	}
+	printk("Invalid config name or id\n");
+	return -1;
+}
+
+static void parse_config_settings_read(char *s)
+{
+	int32_t id = parse_config_settings_id(s);
+	uint16_t k = 0;
+	for (int i = 0; i < CONFIG_SETTINGS_COUNT; i++)
+	{
+		for (int j = 0; j < config_settings_count[i]; j++)
+		{
+			if (id < 0 ? strcmp(s, config_settings_names[k]) == 0 : id == k)
+			{
+				int32_t val = -1;
+				switch (i)
+				{
+				case 0:
+					val = CONFIG_0_SETTINGS_READ(j) ? 1 : 0;
+					break;
+				case 1:
+					val = CONFIG_1_SETTINGS_READ(j) ? 1 : 0;
+					break;
+				case 2:
+					val = CONFIG_2_SETTINGS_READ(j);
+					break;
+				case 3:
+					val = CONFIG_3_SETTINGS_READ(j);
+					break;
+				default:
+					break;
+				}
+				printk("Read config: %s=%d\n", config_settings_names[k], val);
+				return;
+			}
+			k++;
+		}
+	}
+	printk("Invalid config name or id\n");
+}
+
+static void parse_config_settings_read_all()
+{
+	uint16_t k = 0;
+	for (int i = 0; i < CONFIG_SETTINGS_COUNT; i++)
+	{
+		for (int j = 0; j < config_settings_count[i]; j++)
+		{
+			int32_t val = -1;
+			switch (i)
+			{
+			case 0:
+				val = CONFIG_0_SETTINGS_READ(j) ? 1 : 0;
+				break;
+			case 1:
+				val = CONFIG_1_SETTINGS_READ(j) ? 1 : 0;
+				break;
+			case 2:
+				val = CONFIG_2_SETTINGS_READ(j);
+				break;
+			case 3:
+				val = CONFIG_3_SETTINGS_READ(j);
+				break;
+			default:
+				break;
+			}
+			printk("Read config: %s=%d\n", config_settings_names[k], val);
+			k++;
+		}
+	}
+}
+
+static int parse_config_settings_reset(char *s)
+{
+	int32_t id = parse_config_settings_id(s);
+	uint16_t k = 0;
+	for (int i = 0; i < CONFIG_SETTINGS_COUNT; i++)
+	{
+		for (int j = 0; j < config_settings_count[i]; j++)
+		{
+			if (id < 0 ? strcmp(s, config_settings_names[k]) == 0 : id == k)
+			{
+				config_settings_reset(i, j);
+				return 0;
+			}
+			k++;
+		}
+	}
+	printk("Invalid config name or id\n");
+	return -1;
+}
+
+static inline void strtolower(char *str)
+{
+	for (int i = 0; str[i]; i++)
+		str[i] = tolower(str[i]);
+}
+
+static void print_help(void)
+{
+	printk("\nhelp                         Display this help text\n");
+
+	printk("\ninfo                         Get device information\n");
+	printk("uptime                       Get device uptime\n");
+	printk("reboot                       Soft reset the device\n");
+	printk("battery                      Get battery information\n");
+	printk("\nscan                         Restart sensor scan\n");
+	printk("calibrate                    Calibrate sensor ZRO\n");
+	printk("6-side                       Calibrate 6-side accelerometer\n");
+#if SENSOR_MAG_EXISTS
+	printk("mag                          Clear magnetometer calibration\n");
+#endif
+	printk("\nset <address>                Manually set receiver\n");
+	printk("pair                         Enter pairing mode\n");
+	printk("clear                        Clear pairing data\n");
+#if DFU_EXISTS
+	printk("\ndfu                          Enter DFU bootloader\n");
+#endif
+	printk("\nmeow                         Meow!\n");
+
+#if SENSOR_MAG_EXISTS
+	printk("\nreset_data (zro|acc|mag|bat|all)\n");
+#else
+	printk("\nreset_data (zro|acc|bat|all)\n");
+#endif
+
+	printk("\nlist_config                  Display available settings\n");
+	printk("write_config (base64|<config name>|<config id>) <value>\n");
+	printk("read_config (all|base64|<config name>|<config id>)\n");
+	printk("reset_config (all|<config name>|<config id>)\n");
 }
 
 static void console_thread(void)
@@ -347,12 +533,9 @@ static void console_thread(void)
 	printk("*** " CONFIG_USB_DEVICE_MANUFACTURER " " CONFIG_USB_DEVICE_PRODUCT " ***\n");
 #endif
 	printk(FW_STRING);
-	printk("info                         Get device information\n");
-	printk("uptime                       Get device uptime\n");
-	printk("reboot                       Soft reset the device\n");
-	printk("battery                      Get battery information\n");
-	printk("scan                         Restart sensor scan\n");
-	printk("calibrate                    Calibrate sensor ZRO\n");
+	print_help();
+
+	const char command_help[] = "help";
 
 	const char command_info[] = "info";
 	const char command_uptime[] = "uptime";
@@ -360,43 +543,22 @@ static void console_thread(void)
 	const char command_battery[] = "battery";
 	const char command_scan[] = "scan";
 	const char command_calibrate[] = "calibrate";
-
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
-	printk("6-side                       Calibrate 6-side accelerometer\n");
-
 	const char command_6_side[] = "6-side";
-#endif
-
 #if SENSOR_MAG_EXISTS
-	printk("mag                          Clear magnetometer calibration\n");
-
 	const char command_mag[] = "mag";
 #endif
-
-	printk("set <address>                Manually set receiver\n");
-	printk("pair                         Enter pairing mode\n");
-	printk("clear                        Clear pairing data\n");
-
 	const char command_set[] = "set";
 	const char command_pair[] = "pair";
 	const char command_clear[] = "clear";
-
 #if DFU_EXISTS
-	printk("dfu                          Enter DFU bootloader\n");
-
 	const char command_dfu[] = "dfu";
 #endif
-
-	printk("meow                         Meow!\n");
-
 	const char command_meow[] = "meow";
 
 	// debug
-	const char command_reset[] = "reset";
+	const char command_reset_data[] = "reset_data";
 	const char command_reset_arg_zro[] = "zro";
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 	const char command_reset_arg_acc[] = "acc";
-#endif
 #if SENSOR_MAG_EXISTS
 	const char command_reset_arg_mag[] = "mag";
 #endif
@@ -404,11 +566,12 @@ static void console_thread(void)
 	const char command_reset_arg_all[] = "all";
 
 	// settings
-	const char command_write[] = "write";
-	const char command_read[] = "read";
-	const char command_wr_arg_byte[] = "byte";
-	const char command_wr_arg_word[] = "word";
+	const char command_list_config[] = "list_config";
+	const char command_write_config[] = "write_config";
+	const char command_read_config[] = "read_config";
+	const char command_reset_config[] = "reset_config";
 	const char command_wr_arg_all[] = "all";
+	const char command_wr_arg_base64[] = "base64";
 
 	while (1) {
 #if USB_EXISTS
@@ -426,7 +589,11 @@ static void console_thread(void)
 			strtolower(argv[1]); // lower case the first argument
 		// only care that the first words are matchable
 
-		if (strcmp(argv[0], command_info) == 0)
+		if (strcmp(argv[0], command_help) == 0)
+		{
+			print_help();
+		}
+		else if (strcmp(argv[0], command_info) == 0)
 		{
 			print_info();
 		}
@@ -452,19 +619,17 @@ static void console_thread(void)
 		{
 			sensor_request_calibration();
 		}
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 		else if (strcmp(argv[0], command_6_side) == 0)
 		{
 			sensor_request_calibration_6_side();
 		}
-#endif
 #if SENSOR_MAG_EXISTS
 		else if (strcmp(argv[0], command_mag) == 0)
 		{
 			sensor_calibration_clear_mag(NULL, true);
 		}
 #endif
-		else if (strcmp(argv[0], command_set) == 0) 
+		else if (strcmp(argv[0], command_set) == 0)
 		{
 			if (argc != 2)
 			{
@@ -479,11 +644,11 @@ static void console_thread(void)
 			else
 				printk("Invalid address\n");
 		}
-		else if (strcmp(argv[0], command_pair) == 0) 
+		else if (strcmp(argv[0], command_pair) == 0)
 		{
 			esb_reset_pair();
 		}
-		else if (strcmp(argv[0], command_clear) == 0) 
+		else if (strcmp(argv[0], command_clear) == 0)
 		{
 			esb_clear_pair();
 		}
@@ -499,186 +664,109 @@ static void console_thread(void)
 #endif
 		}
 #endif
-		else if (strcmp(argv[0], command_meow) == 0) 
+		else if (strcmp(argv[0], command_meow) == 0)
 		{
 			print_meow();
 		}
-		else if (strcmp(argv[0], command_reset) == 0)
+		else if (strcmp(argv[0], command_reset_data) == 0)
+		{
+			if (argc != 2)
+				printk("Invalid number of arguments\n");
+			else if (strcmp(argv[1], command_reset_arg_zro) == 0)
+				sensor_calibration_clear(NULL, NULL, true);
+			else if (strcmp(argv[1], command_reset_arg_acc) == 0)
+				sensor_calibration_clear_6_side(NULL, true);
+#if SENSOR_MAG_EXISTS
+			else if (strcmp(argv[1], command_reset_arg_mag) == 0)
+				sensor_calibration_clear_mag(NULL, true);
+#endif
+			else if (strcmp(argv[1], command_reset_arg_bat) == 0)
+				sys_reset_battery_tracker();
+			else if (strcmp(argv[1], command_reset_arg_all) == 0)
+				sys_clear();
+			else
+				printk("Invalid argument\n");
+		}
+		else if (strcmp(line, command_list_config) == 0)
+		{
+			uint16_t k = 0;
+			for (int i = 0; i < CONFIG_SETTINGS_COUNT; i++)
+			{
+				printk("Config %d:\n", i);
+				for (int j = 0; j < config_settings_count[i]; j++)
+				{
+					printk("%u: %s\n", k, config_settings_names[k]);
+					k++;
+				}
+			}
+		}
+		else if (strcmp(argv[0], command_write_config) == 0)
+		{
+			if (argc != 3)
+			{
+				printk("Invalid number of arguments\n");
+			}
+			else if (strcmp(argv[1], command_wr_arg_base64) == 0)
+			{
+				uint8_t *tmp = k_malloc(128);
+				uint16_t len = 0;
+				int err = base64_decode(tmp, 128, (size_t *)&len, argv[2], 172);
+				if (err)
+				{
+					printk("Unable to decode input");
+					continue;
+				}
+				//printk("decode: %d, len %d\n", err, len);
+				memcpy(retained->settings, tmp, sizeof(retained->settings));
+				config_settings_init(); // reset any non-overridden values
+				sys_write(SETTINGS_ID, NULL, retained->settings, sizeof(retained->settings));
+				k_free(tmp);
+				printk("Updated config\n");
+			}
+			else
+			{
+				int32_t val = parse_i32(argv[2], 10);
+				parse_config_settings_write(argv[1], val);
+			}
+		}
+		else if (strcmp(line, command_read_config) == 0)
 		{
 			if (argc != 2)
 			{
 				printk("Invalid number of arguments\n");
 			}
-			else if (strcmp(argv[1], command_reset_arg_zro) == 0)
+			else if (strcmp(argv[1], command_wr_arg_all) == 0)
 			{
-				sensor_calibration_clear(NULL, NULL, true);
+				parse_config_settings_read_all();
 			}
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
-			else if (strcmp(argv[1], command_reset_arg_acc) == 0)
+			else if (strcmp(argv[1], command_wr_arg_base64) == 0)
 			{
-				sensor_calibration_clear_6_side(NULL, true);
-			}
-#endif
-#if SENSOR_MAG_EXISTS
-			else if (strcmp(argv[1], command_reset_arg_mag) == 0)
-			{
-				sensor_calibration_clear_mag(NULL, true);
-			}
-#endif
-			else if (strcmp(argv[1], command_reset_arg_bat) == 0)
-			{
-				sys_reset_battery_tracker();
-			}
-			else if (strcmp(argv[1], command_reset_arg_all) == 0)
-			{
-				sys_clear();
+				uint8_t *tmp = k_malloc(173);
+				uint16_t len = 0;
+				base64_encode(tmp, 173, (size_t *)&len, retained->settings, 128);
+				//printk("encode: %d, len %d\n", err, len);
+				printk("%s\n", tmp);
+				k_free(tmp);
 			}
 			else
 			{
-				printk("Invalid argument\n");
+				parse_config_settings_read(argv[1]);
 			}
 		}
-		else if (strcmp(argv[0], command_write) == 0) 
+		else if (strcmp(line, command_reset_config) == 0)
 		{
-			if (argc == 1)
+			if (argc != 2)
 			{
 				printk("Invalid number of arguments\n");
 			}
 			else if (strcmp(argv[1], command_wr_arg_all) == 0)
 			{
-				if (argc != 3)
-				{
-					printk("Invalid number of arguments\n");
-				}
-				else
-				{
-					uint8_t *tmp = k_malloc(128);
-					uint16_t len = 0;
-					int err = base64_decode(tmp, 128, (size_t *)&len, argv[2], 172);
-					printk("decode: %d, len %d\n", err, len);
-					memcpy(retained->settings, tmp, sizeof(retained->settings));
-					sys_write(SETTINGS_ID, NULL, retained->settings, sizeof(retained->settings));
-					k_free(tmp);
-				}
-			}
-			else if (argc != 4)
-			{
-				printk("Invalid number of arguments\n");
+				config_settings_reset_all();
 			}
 			else
 			{
-				uint64_t addr = parse_u64(argv[2], 16);
-				uint64_t val = parse_u64(argv[3], 10);
-				if (strcmp(argv[1], command_wr_arg_byte) == 0)
-				{
-					if (addr < 128)
-					{
-						if (val < (1 << 8))
-						{
-							printk("write byte: %lld to %lld\n", val, addr);
-							memcpy(retained->settings + addr, &val, 1);
-							sys_write(SETTINGS_ID, NULL, retained->settings, sizeof(retained->settings));
-						}
-						else
-						{
-							printk("Invalid value\n");
-						}
-					}
-					else
-					{
-						printk("Invalid address\n");
-					}
-				}
-				else if (strcmp(argv[1], command_wr_arg_word) == 0)
-				{
-					if (addr < 127)
-					{
-						if (val < (1 << 16))
-						{
-							printk("write word: %lld to %lld\n", val, addr);
-							memcpy(retained->settings + addr, &val, 2);
-							sys_write(SETTINGS_ID, NULL, retained->settings, sizeof(retained->settings));
-						}
-						else
-						{
-							printk("Invalid value\n");
-						}
-					}
-					else
-					{
-						printk("Invalid address\n");
-					}
-				}
-			}
-		}
-		else if (strcmp(line, command_read) == 0) 
-		{
-			if (argc == 1)
-			{
-				printk("Invalid number of arguments\n");
-			}
-			else if (strcmp(argv[1], command_wr_arg_all) == 0)
-			{
-				if (argc != 2)
-				{
-					printk("Invalid number of arguments\n");
-				}
-				else
-				{
-					uint8_t *tmp = k_malloc(173);
-					uint16_t len = 0;
-					int err = base64_encode(tmp, 173, (size_t *)&len, retained->settings, 128);
-					printk("encode: %d, len %d\n", err, len);
-					printk("%s\n", tmp);
-					k_free(tmp);
-				}
-			}
-			else if (argc != 3)
-			{
-				printk("Invalid number of arguments\n");
-			}
-			else
-			{
-				uint64_t addr = parse_u64(argv[2], 16);
-				uint64_t val = 0;
-				if (strcmp(argv[1], command_wr_arg_byte) == 0)
-				{
-					if (addr < 128)
-					{
-						if (val < (1 << 8))
-						{
-							memcpy(&val, retained->settings + addr, 1);
-							printk("read byte: %lld from %lld\n", val, addr);
-						}
-						else
-						{
-							printk("Invalid value\n");
-						}
-					}
-					else
-					{
-						printk("Invalid address\n");
-					}
-				}
-				else if (strcmp(argv[1], command_wr_arg_word) == 0)
-				{
-					if (addr < 127)
-					{
-						if (val < (1 << 16))
-						{
-							memcpy(&val, retained->settings + addr, 2);
-							printk("read word: %lld from %lld\n", val, addr);
-						}
-						else
-						{
-							printk("Invalid value\n");
-						}
-					}
-					else
-					{
-						printk("Invalid address\n");
-					}
-				}
+				if (!parse_config_settings_reset(argv[1]))
+					printk("Reset config: %s\n", argv[1]);
 			}
 		}
 		else

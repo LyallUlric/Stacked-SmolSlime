@@ -27,14 +27,7 @@
 #include "sensor/sensor.h"
 
 #include <zephyr/sys/reboot.h>
-#include <zephyr/drivers/gpio.h>
-#define ZEPHYR_USER_NODE DT_PATH(zephyr_user)
-#if DT_NODE_HAS_PROP(ZEPHYR_USER_NODE, pwr_gpios)
-static const struct gpio_dt_spec pwr = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, pwr_gpios);
-static const struct gpio_dt_spec gnd = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, gnd_gpios);
-#else
-#warning "IMU power pins not defined: do not stack IMU on SUPERMINI"
-#endif
+
 #define DFU_DBL_RESET_MEM 0x20007F7C
 #define DFU_DBL_RESET_APP 0x4ee5677e
 
@@ -45,7 +38,14 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 #if DT_NODE_HAS_PROP(DT_ALIAS(sw0), gpios)
 #define BUTTON_EXISTS true
 #endif
-
+#include <zephyr/drivers/gpio.h>
+#define ZEPHYR_USER_NODE DT_PATH(zephyr_user)
+#if DT_NODE_HAS_PROP(ZEPHYR_USER_NODE, pwr_gpios)
+static const struct gpio_dt_spec pwr = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, pwr_gpios);
+static const struct gpio_dt_spec gnd = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, gnd_gpios);
+#else
+#warning "IMU power pins not defined: do not stack IMU on SUPERMINI"
+#endif
 #define DFU_EXISTS CONFIG_BUILD_OUTPUT_UF2 || CONFIG_BOARD_HAS_NRF5_BOOTLOADER
 #define ADAFRUIT_BOOTLOADER CONFIG_BUILD_OUTPUT_UF2
 
@@ -57,9 +57,6 @@ int main(void)
     gpio_pin_configure_dt(&pwr, GPIO_OUTPUT_ACTIVE);
     gpio_pin_set_dt(&pwr, 1);
 #endif 
-#if IGNORE_RESET && BUTTON_EXISTS
-	bool reset_pin_reset = false;
-#else
 #ifdef NRF_RESET
 	bool reset_pin_reset = NRF_RESET->RESETREAS & RESET_RESETREAS_RESETPIN_Msk;
 	NRF_RESET->RESETREAS = NRF_RESET->RESETREAS; // Clear RESETREAS
@@ -67,6 +64,10 @@ int main(void)
 	bool reset_pin_reset = NRF_POWER->RESETREAS & POWER_RESETREAS_RESETPIN_Msk;
 	NRF_POWER->RESETREAS = NRF_POWER->RESETREAS; // Clear RESETREAS
 #endif
+
+#if BUTTON_EXISTS
+	if (CONFIG_0_SETTINGS_READ(CONFIG_0_IGNORE_RESET))
+		reset_pin_reset = false;
 #endif
 
 	set_led(SYS_LED_PATTERN_ON, SYS_LED_PRIORITY_BOOT); // Boot LED
@@ -93,10 +94,8 @@ int main(void)
 			}
 			k_msleep(1);
 		}
-#if USER_SHUTDOWN_ENABLED
-		if (k_uptime_get() < 50 && booting_from_shutdown) // debounce
+		if (CONFIG_0_SETTINGS_READ(CONFIG_0_USER_SHUTDOWN) && k_uptime_get() < 50 && booting_from_shutdown) // debounce
 			sys_request_system_off(false);
-#endif
 		if (k_uptime_get() <= 5000)
 			set_led(SYS_LED_PATTERN_ONESHOT_POWERON, SYS_LED_PRIORITY_HIGHEST);
 		else
@@ -119,8 +118,13 @@ int main(void)
 		reboot_counter++;
 		reboot_counter_write(reboot_counter);
 		LOG_INF("Reset count: %u", reboot_counter);
-#if ADAFRUIT_BOOTLOADER && !(IGNORE_RESET && BUTTON_EXISTS) // Using Adafruit bootloader, skip DFU if reset button is in use
-		(*dbl_reset_mem) = DFU_DBL_RESET_APP; // Skip DFU
+#if ADAFRUIT_BOOTLOADER
+#if BUTTON_EXISTS
+		if (!CONFIG_0_SETTINGS_READ(CONFIG_0_IGNORE_RESET))
+			(*dbl_reset_mem) = DFU_DBL_RESET_APP; // Using Adafruit bootloader, skip DFU if reset button could be used
+#else
+		(*dbl_reset_mem) = DFU_DBL_RESET_APP; // Using Adafruit bootloader, skip DFU since reset button is used
+#endif
 #endif
 		k_msleep(1000); // Wait before clearing counter and continuing
 	}
@@ -128,17 +132,21 @@ int main(void)
 	if (!reset_pin_reset && reset_mode == 0) // Only need to check once, if the button is pressed again an interrupt is triggered from before
 		reset_mode = -1; // Cancel reset_mode (shutdown)
 
-#if USER_SHUTDOWN_ENABLED
-	bool charging = chg_read();
-	bool charged = stby_read();
-	bool plugged = vin_read();
+	if (CONFIG_0_SETTINGS_READ(CONFIG_0_USER_SHUTDOWN))
+	{
+		bool charging = chg_read();
+		bool charged = stby_read();
+		bool plugged = vin_read();
 
-	if (reset_mode == 0 && !booting_from_shutdown && !charging && !charged && !plugged) // Reset mode user shutdown, only if unplugged and undocked
-		sys_user_shutdown();
-#endif
+		if (reset_mode == 0 && !booting_from_shutdown && !charging && !charged && !plugged) // Reset mode user shutdown, only if unplugged and undocked
+			sys_user_shutdown();
+	}
 
 	if (!booting_from_shutdown) // ONESHOT_POWERON automatically sets LED off
+	{
+		k_usleep(1); // TODO: its possible main is holding exec priority too long and causing stuff to break, very particularly during set_led?
 		set_led(SYS_LED_PATTERN_OFF, SYS_LED_PRIORITY_BOOT);
+	}
 
 	sys_reset_mode(reset_mode);
 

@@ -66,24 +66,18 @@ static void sensor_sample_mag(const float m[3]);
 static int sensor_wait_mag(float m[3], k_timeout_t timeout);
 
 static void sensor_calibrate_imu(void);
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 static void sensor_calibrate_6_side(void);
-#endif
 static int sensor_calibrate_mag(void);
 
 // helpers
 static bool wait_for_motion(bool motion, int samples);
 static int check_sides(const float *);
 static void magneto_reset(void);
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 static int isAccRest(float *, float *, float, int *, int);
-#endif
 
 // calibration logic
 static int sensor_offsetBias(float *dest1, float *dest2);
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 static int sensor_6_sideBias(float a_inv[][3]);
-#endif
 static void sensor_sample_mag_magneto_sample(const float a[3], const float m[3]);
 
 static int sensor_calibration_request(int id);
@@ -91,15 +85,16 @@ static int sensor_calibration_request(int id);
 static void calibration_thread(void);
 K_THREAD_DEFINE(calibration_thread_id, 1024, calibration_thread, NULL, NULL, NULL, CALIBRATION_THREAD_PRIORITY, K_FP_REGS, 0);
 
+static bool use_6_side = false;
+
 void sensor_calibration_process_accel(float a[3])
 {
 	sensor_sample_accel(a);
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
-	apply_BAinv(a, accBAinv);
-#else
-	for (int i = 0; i < 3; i++)
-		a[i] -= accelBias[i];
-#endif
+	if (use_6_side)
+		apply_BAinv(a, accBAinv);
+	else
+		for (int i = 0; i < 3; i++)
+			a[i] -= accelBias[i];
 }
 
 void sensor_calibration_process_gyro(float g[3])
@@ -154,7 +149,6 @@ int sensor_calibration_validate(float *a_bias, float *g_bias, bool write)
 	return 0;
 }
 
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 int sensor_calibration_validate_6_side(float a_inv[][3], bool write)
 {
 	if (a_inv == NULL)
@@ -174,7 +168,6 @@ int sensor_calibration_validate_6_side(float a_inv[][3], bool write)
 	}
 	return 0;
 }
-#endif
 
 int sensor_calibration_validate_mag(float m_inv[][3], bool write)
 {
@@ -214,7 +207,6 @@ void sensor_calibration_clear(float *a_bias, float *g_bias, bool write)
 	sensor_fusion_invalidate();
 }
 
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 void sensor_calibration_clear_6_side(float a_inv[][3], bool write)
 {
 	if (a_inv == NULL)
@@ -228,7 +220,6 @@ void sensor_calibration_clear_6_side(float a_inv[][3], bool write)
 		sys_write(MAIN_ACC_6_BIAS_ID, &retained->accBAinv, a_inv, sizeof(accBAinv));
 	}
 }
-#endif
 
 void sensor_calibration_clear_mag(float m_inv[][3], bool write)
 {
@@ -247,12 +238,10 @@ void sensor_request_calibration(void)
 	sensor_calibration_request(1);
 }
 
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 void sensor_request_calibration_6_side(void)
 {
 	sensor_calibration_request(2);
 }
-#endif
 
 void sensor_request_calibration_mag(void)
 {
@@ -392,18 +381,16 @@ static void sensor_calibrate_imu()
 	}
 	else
 	{
-#if !CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
-		LOG_INF("Accelerometer bias: %.5f %.5f %.5f", (double)a_bias[0], (double)a_bias[1], (double)a_bias[2]);
-#endif
+		if (!use_6_side)
+			LOG_INF("Accelerometer bias: %.5f %.5f %.5f", (double)a_bias[0], (double)a_bias[1], (double)a_bias[2]);
 		LOG_INF("Gyroscope bias: %.5f %.5f %.5f", (double)g_bias[0], (double)g_bias[1], (double)g_bias[2]);
 	}
 	if (sensor_calibration_validate(a_bias, g_bias, false))
 	{
 		set_led(SYS_LED_PATTERN_OFF, SYS_LED_PRIORITY_SENSOR);
 		LOG_INF("Restoring previous calibration");
-#if !CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
-		LOG_INF("Accelerometer bias: %.5f %.5f %.5f", (double)accelBias[0], (double)accelBias[1], (double)accelBias[2]);
-#endif
+		if (!use_6_side)
+			LOG_INF("Accelerometer bias: %.5f %.5f %.5f", (double)accelBias[0], (double)accelBias[1], (double)accelBias[2]);
 		LOG_INF("Gyroscope bias: %.5f %.5f %.5f", (double)gyroBias[0], (double)gyroBias[1], (double)gyroBias[2]);
 		sensor_calibration_validate(NULL, NULL, true); // additionally verify old calibration
 		return;
@@ -422,7 +409,6 @@ static void sensor_calibrate_imu()
 	set_led(SYS_LED_PATTERN_ONESHOT_COMPLETE, SYS_LED_PRIORITY_SENSOR);
 }
 
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 static void sensor_calibrate_6_side(void)
 {
 	float a_inv[4][3];
@@ -465,7 +451,6 @@ static void sensor_calibrate_6_side(void)
 	LOG_INF("Finished calibration");
 	set_led(SYS_LED_PATTERN_ONESHOT_COMPLETE, SYS_LED_PRIORITY_SENSOR);
 }
-#endif
 
 static int sensor_calibrate_mag(void)
 {
@@ -564,7 +549,7 @@ static int check_sides(const float *a)
 }
 
 static void magneto_reset(void)
-{	
+{
 	magneto_progress = 0; // reusing ata, so guarantee cleared mag progress
 	last_magneto_progress = 0;
 	magneto_progress_time = 0;
@@ -573,7 +558,6 @@ static void magneto_reset(void)
 	sample_count = 0;
 }
 
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 static int isAccRest(float *acc, float *pre_acc, float threshold, int *t, int restdelta)
 {
 	float delta_x = acc[0] - pre_acc[0];
@@ -591,7 +575,6 @@ static int isAccRest(float *acc, float *pre_acc, float threshold, int *t, int re
 		return 1;
 	return 0;
 }
-#endif
 
 // TODO: setup 6 sided calibration (bias and scale, and maybe gyro ZRO?), setup temp calibration (particulary for gyro ZRO)
 int sensor_offsetBias(float *dest1, float *dest2)
@@ -607,11 +590,12 @@ int sensor_offsetBias(float *dest1, float *dest2)
 			return -2; // Timeout
 		if (!v_epsilon(rawData, last_a, 0.1))
 			return -1; // Motion detected
-#if !CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
-		dest1[0] += rawData[0];
-		dest1[1] += rawData[1];
-		dest1[2] += rawData[2];
-#endif
+		if (!use_6_side)
+		{
+			dest1[0] += rawData[0];
+			dest1[1] += rawData[1];
+			dest1[2] += rawData[2];
+		}
 		if (sensor_wait_gyro(rawData, K_MSEC(1000)))
 			return -2; // Timeout
 		dest2[0] += rawData[0];
@@ -620,25 +604,26 @@ int sensor_offsetBias(float *dest1, float *dest2)
 		i++;
 	}
 	LOG_INF("Samples: %d", i);
-#if !CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
-	dest1[0] /= i;
-	dest1[1] /= i;
-	dest1[2] /= i;
-	if (dest1[0] > 0.9f)
-		dest1[0] -= 1.0f; // Remove gravity from the x-axis accelerometer bias calculation
-	else if (dest1[0] < -0.9f)
-		dest1[0] += 1.0f; // Remove gravity from the x-axis accelerometer bias calculation
-	else if (dest1[1] > 0.9f)
-		dest1[1] -= 1.0f; // Remove gravity from the y-axis accelerometer bias calculation
-	else if (dest1[1] < -0.9f)
-		dest1[1] += 1.0f; // Remove gravity from the y-axis accelerometer bias calculation
-	else if (dest1[2] > 0.9f)
-		dest1[2] -= 1.0f; // Remove gravity from the z-axis accelerometer bias calculation
-	else if (dest1[2] < -0.9f)
-		dest1[2] += 1.0f; // Remove gravity from the z-axis accelerometer bias calculation
-	else
-		return -1;
-#endif
+	if (!use_6_side)
+	{
+		dest1[0] /= i;
+		dest1[1] /= i;
+		dest1[2] /= i;
+		if (dest1[0] > 0.9f)
+			dest1[0] -= 1.0f; // Remove gravity from the x-axis accelerometer bias calculation
+		else if (dest1[0] < -0.9f)
+			dest1[0] += 1.0f; // Remove gravity from the x-axis accelerometer bias calculation
+		else if (dest1[1] > 0.9f)
+			dest1[1] -= 1.0f; // Remove gravity from the y-axis accelerometer bias calculation
+		else if (dest1[1] < -0.9f)
+			dest1[1] += 1.0f; // Remove gravity from the y-axis accelerometer bias calculation
+		else if (dest1[2] > 0.9f)
+			dest1[2] -= 1.0f; // Remove gravity from the z-axis accelerometer bias calculation
+		else if (dest1[2] < -0.9f)
+			dest1[2] += 1.0f; // Remove gravity from the z-axis accelerometer bias calculation
+		else
+			return -1;
+	}
 	dest2[0] /= i;
 	dest2[1] /= i;
 	dest2[2] /= i;
@@ -646,7 +631,6 @@ int sensor_offsetBias(float *dest1, float *dest2)
 }
 
 // TODO: can be used to get a better gyro bias
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 int sensor_6_sideBias(float a_inv[][3])
 {
 	// Acc 6 side calibrate
@@ -756,7 +740,6 @@ int sensor_6_sideBias(float a_inv[][3])
 	printk("Calibration is complete.\n");
 	return 0;
 }
-#endif
 
 // TODO: terrible name
 static void sensor_sample_mag_magneto_sample(const float a[3], const float m[3])
@@ -813,14 +796,15 @@ static void calibration_thread(void)
 
 	// Verify calibrations
 	sensor_calibration_validate(NULL, NULL, true);
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 	sensor_calibration_validate_6_side(NULL, true);
-#endif
 	sensor_calibration_validate_mag(NULL, true);
 
 	// requested calibrations run here
 	while (1)
 	{
+		// update calibration config
+		use_6_side = CONFIG_1_SETTINGS_READ(CONFIG_1_SENSOR_USE_6_SIDE_CALIBRATION);
+
 		int requested = sensor_calibration_request(0);
 		switch (requested)
 		{
@@ -830,22 +814,23 @@ static void calibration_thread(void)
 			sensor_calibration_request(-1); // clear request
 			set_status(SYS_STATUS_CALIBRATION_RUNNING, false);
 			break;
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
 		case 2:
 			set_status(SYS_STATUS_CALIBRATION_RUNNING, true);
-			sensor_calibrate_6_side();
+			if (use_6_side)
+				sensor_calibrate_6_side();
+			else
+				LOG_WRN("6 side calibration is disabled");
 			sensor_calibration_request(-1); // clear request
 			set_status(SYS_STATUS_CALIBRATION_RUNNING, false);
 			break;
-#endif
 		default:
 			if (magneto_progress & 0b10000000)
 				requested = sensor_calibrate_mag();
 			break;
 		}
-		if (requested < 0)
-			k_msleep(5);
-		else
+		if (requested < 0) // TODO: is this correct behavior?
 			k_msleep(100);
+		else
+			k_msleep(5);
 	}
 }

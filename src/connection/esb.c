@@ -42,10 +42,11 @@ uint32_t led_clock_offset = 0;
 
 uint32_t tx_errors = 0;
 int64_t last_tx_success = 0;
+int64_t last_tx_fail = 0;
 
 static struct esb_payload rx_payload;
 static struct esb_payload tx_payload = ESB_CREATE_PAYLOAD(0,
-														  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+														  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 static struct esb_payload tx_payload_pair = ESB_CREATE_PAYLOAD(0,
 														  0, 0, 0, 0, 0, 0, 0, 0);
 
@@ -54,19 +55,26 @@ static uint8_t paired_addr[8] = {0};
 static bool esb_initialized = false;
 static bool esb_paired = false;
 
-#define TX_ERROR_THRESHOLD 100
+#define TX_ERROR_THRESHOLD 30
 
 LOG_MODULE_REGISTER(esb_event, LOG_LEVEL_INF);
 
 static void esb_thread(void);
 K_THREAD_DEFINE(esb_thread_id, 512, esb_thread, NULL, NULL, NULL, ESB_THREAD_PRIORITY, 0, 0);
 
+uint64_t pairing_packets = 0;
+
 void event_handler(struct esb_evt const *event)
 {
 	switch (event->evt_id)
 	{
 	case ESB_EVENT_TX_SUCCESS:
+		if (!paired_addr[0]) // zero, not paired
+			pairing_packets++; // keep track of pairing state
+		if (tx_errors >= TX_ERROR_THRESHOLD)
+			last_tx_fail = k_uptime_get();
 		tx_errors = 0;
+		LOG_DBG("TX SUCCESS");
 		if (esb_paired)
 			clocks_stop();
 		break;
@@ -83,6 +91,7 @@ void event_handler(struct esb_evt const *event)
 		// TODO: have to read rx until -ENODATA (or -EACCES/-EINVAL)
 		if (!esb_read_rx_payload(&rx_payload)) // zero, rx success
 		{
+			LOG_DBG("rx len: %d, pipe: %d", rx_payload.length, rx_payload.pipe);
 			if (!paired_addr[0]) // zero, not paired
 			{
 				LOG_DBG("tx: %16llX rx: %16llX", *(uint64_t *)tx_payload_pair.data, *(uint64_t *)rx_payload.data);
@@ -219,7 +228,7 @@ base_addr_p1: Base address for pipe 1-7, in big endian.
 pipe_prefixes: Address prefix for pipe 0 to 7.
 */
 static const uint8_t discovery_base_addr_0[4] = {0x62, 0x39, 0x8A, 0xF2};
-static const uint8_t discovery_base_addr_1[4] = {0x28, 0xFF, 0x50, 0xB8};
+static const uint8_t discovery_base_addr_1[4] = {0x28, 0xFF, 0x50, 0xB8}; // TODO: not used
 static const uint8_t discovery_addr_prefix[8] = {0xFE, 0xFF, 0x29, 0x27, 0x09, 0x02, 0xB2, 0xD6};
 
 static uint8_t base_addr_0[4], base_addr_1[4], addr_prefix[8] = {0};
@@ -237,7 +246,7 @@ int esb_initialize(bool tx)
 		config.event_handler = event_handler;
 		// config.bitrate = ESB_BITRATE_2MBPS;
 		// config.crc = ESB_CRC_16BIT;
-		config.tx_output_power = CONFIG_RADIO_TX_POWER;
+		config.tx_output_power = CONFIG_2_SETTINGS_READ(CONFIG_2_RADIO_TX_POWER);
 		// config.retransmit_delay = 600;
 		//config.retransmit_count = 0;
 		//config.tx_mode = ESB_TXMODE_MANUAL;
@@ -252,7 +261,7 @@ int esb_initialize(bool tx)
 		config.event_handler = event_handler;
 		// config.bitrate = ESB_BITRATE_2MBPS;
 		// config.crc = ESB_CRC_16BIT;
-		config.tx_output_power = CONFIG_RADIO_TX_POWER;
+		config.tx_output_power = CONFIG_2_SETTINGS_READ(CONFIG_2_RADIO_TX_POWER);
 		// config.retransmit_delay = 600;
 		// config.retransmit_count = 3;
 		// config.tx_mode = ESB_TXMODE_AUTO;
@@ -317,9 +326,11 @@ inline void esb_set_addr_paired(void)
 		if (addr_buffer[i] == 0x00 || addr_buffer[i] == 0x55 || addr_buffer[i] == 0xAA) // Avoid invalid addresses (see nrf datasheet)
 			addr_buffer[i] += 8;
 	}
-	memcpy(base_addr_0, addr_buffer, sizeof(base_addr_0));
+//	memcpy(base_addr_0, addr_buffer, sizeof(base_addr_0));
 	memcpy(base_addr_1, addr_buffer + 4, sizeof(base_addr_1));
-	memcpy(addr_prefix, addr_buffer + 8, sizeof(addr_prefix));
+//	memcpy(addr_prefix, addr_buffer + 8, sizeof(addr_prefix));
+	memcpy(base_addr_0, discovery_base_addr_0, sizeof(base_addr_0));
+	memcpy(addr_prefix, discovery_addr_prefix, sizeof(addr_prefix));
 }
 
 void esb_set_pair(uint64_t addr)
@@ -343,7 +354,7 @@ void esb_set_pair(uint64_t addr)
 
 void esb_pair(void)
 {
-	if (tx_errors >= 100)
+	if (get_status(SYS_STATUS_CONNECTION_ERROR))
 		set_status(SYS_STATUS_CONNECTION_ERROR, false);
 	tx_errors = 0;
 	if (!paired_addr[0]) // zero, no receiver paired
@@ -352,6 +363,7 @@ void esb_pair(void)
 		esb_set_addr_discovery();
 		esb_initialize(true);
 //		timer_init(); // TODO: shouldn't be here!!!
+		tx_payload_pair.pipe = 0;
 		tx_payload_pair.noack = false;
 		uint64_t *addr = (uint64_t *)NRF_FICR->DEVICEADDR; // Use device address as unique identifier (although it is not actually guaranteed, see datasheet)
 		memcpy(&tx_payload_pair.data[2], addr, 6);
@@ -364,32 +376,54 @@ void esb_pair(void)
 		set_led(SYS_LED_PATTERN_SHORT, SYS_LED_PRIORITY_CONNECTION);
 		while (paired_addr[0] != checksum)
 		{
+			int64_t time_begin = k_uptime_get();
+
 			if (!esb_initialized)
 			{
 				esb_set_addr_discovery();
 				esb_initialize(true);
 			}
+
 			if (!clock_status)
 				clocks_start();
+
 			if (paired_addr[0])
 			{
 				LOG_INF("Incorrect checksum: %02X", paired_addr[0]);
 				paired_addr[0] = 0; // Packet not for this device
 			}
-			esb_flush_rx();
-			esb_flush_tx();
-			tx_payload_pair.data[1] = 0; // send pairing request
+
+//			esb_flush_rx();
+//			esb_flush_tx();
+
+			pairing_packets = 0;
+
+			// send pairing request
+			tx_payload_pair.data[1] = 0;
 			esb_write_payload(&tx_payload_pair);
-			esb_start_tx();
-			k_msleep(2);
-			tx_payload_pair.data[1] = 1; // receive ack data
-			esb_write_payload(&tx_payload_pair);
-			esb_start_tx();
-			k_msleep(2);
-			tx_payload_pair.data[1] = 2; // "acknowledge" pairing from receiver
-			esb_write_payload(&tx_payload_pair);
-			esb_start_tx();
-			k_msleep(996);
+			k_usleep(100);
+			while (!esb_is_idle() && (k_uptime_get() < (time_begin + 10)))
+				k_usleep(1);
+
+			// receive ack data
+			tx_payload_pair.data[1] = 1;
+			if ((pairing_packets == 1) && (k_uptime_get() < (time_begin + 10)))
+				esb_write_payload(&tx_payload_pair);
+			k_usleep(100);
+			while (!esb_is_idle() && (k_uptime_get() < (time_begin + 10)))
+				k_usleep(1);
+
+			if (pairing_packets == 2)
+				LOG_INF("Pairing request received");
+
+			if (clock_status)
+				clocks_stop();
+
+			int64_t time_delta = k_uptime_get() - time_begin;
+			if (time_delta > 1000)
+				k_yield();
+			else
+				k_msleep(1000 - time_delta);
 		}
 		set_led(SYS_LED_PATTERN_ONESHOT_COMPLETE, SYS_LED_PRIORITY_CONNECTION);
 		LOG_INF("Paired");
@@ -430,7 +464,8 @@ void esb_write(uint8_t *data)
 	if (!esb_initialized || !esb_paired)
 		return;
 	if (!clock_status)
-		clocks_start(); 
+		clocks_start();
+	tx_payload.pipe = 1; // using base address 1
 #if defined(NRF54L15_XXAA) // TODO: esb halts with ack and tx fail
 	tx_payload.noack = true;
 #else
@@ -449,41 +484,31 @@ bool esb_ready(void)
 
 static void esb_thread(void)
 {
-#if CONFIG_CONNECTION_OVER_HID
+	bool use_hid = CONFIG_0_SETTINGS_READ(CONFIG_0_CONNECTION_OVER_HID);
+	bool use_shutdown = CONFIG_0_SETTINGS_READ(CONFIG_0_USER_SHUTDOWN);
 	int64_t start_time = k_uptime_get();
-#endif
 
 	// Read paired address from retained
 	memcpy(paired_addr, retained->paired_addr, sizeof(paired_addr));
 
 	while (1)
 	{
-#if CONFIG_CONNECTION_OVER_HID
-		if (!esb_paired && get_status(SYS_STATUS_USB_CONNECTED) == false && k_uptime_get() - 750 > start_time) // only automatically enter pairing while not potentially communicating by usb
-#else
-		if (!esb_paired)
-#endif
+		if (!esb_paired && (!use_hid || (!get_status(SYS_STATUS_USB_CONNECTED) && k_uptime_get() - 750 > start_time))) // only automatically enter pairing while not potentially communicating by usb
 		{
 			esb_pair();
 			esb_initialize(true);
 		}
 		if (tx_errors >= TX_ERROR_THRESHOLD)
 		{
-#if CONFIG_CONNECTION_OVER_HID
-			if (get_status(SYS_STATUS_CONNECTION_ERROR) == false && get_status(SYS_STATUS_USB_CONNECTED) == false) // only raise error while not potentially communicating by usb
-#else
-			if (get_status(SYS_STATUS_CONNECTION_ERROR) == false)
-#endif
+			if (!get_status(SYS_STATUS_CONNECTION_ERROR) && (!use_hid || !get_status(SYS_STATUS_USB_CONNECTED))) // only raise error while not potentially communicating by usb
 				set_status(SYS_STATUS_CONNECTION_ERROR, true);
-#if USER_SHUTDOWN_ENABLED
-			if (k_uptime_get() - last_tx_success > CONFIG_CONNECTION_TIMEOUT_DELAY) // shutdown if receiver is not detected // TODO: is shutdown necessary if usb is connected at the time?
+			if (use_shutdown && k_uptime_get() - last_tx_success > CONFIG_3_SETTINGS_READ(CONFIG_3_CONNECTION_TIMEOUT_DELAY)) // shutdown if receiver is not detected // TODO: is shutdown necessary if usb is connected at the time?
 			{
-				LOG_WRN("No response from receiver in %dm", CONFIG_CONNECTION_TIMEOUT_DELAY / 60000);
+				LOG_WRN("No response from receiver in %dm", CONFIG_3_SETTINGS_READ(CONFIG_3_CONNECTION_TIMEOUT_DELAY) / 60000);
 				sys_request_system_off(false);
 			}
-#endif
 		}
-		else if (tx_errors == 0 && get_status(SYS_STATUS_CONNECTION_ERROR) == true)
+		else if (tx_errors < TX_ERROR_THRESHOLD && get_status(SYS_STATUS_CONNECTION_ERROR) && k_uptime_get() - last_tx_fail > 3000) // TODO: there is possibly some race condition causing tx_error to potentially be above zero more often than not, so the check is more lenient; tx_error under threshold and last errors above threshold was not recent
 		{
 			set_status(SYS_STATUS_CONNECTION_ERROR, false);
 		}

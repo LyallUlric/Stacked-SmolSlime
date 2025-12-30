@@ -55,7 +55,7 @@ static const struct divider_config divider_config = {
 };
 
 struct divider_data {
-	const struct device* adc;
+	const struct device *adc;
 	struct adc_channel_cfg adc_cfg;
 	struct adc_sequence adc_seq;
 	int16_t raw;
@@ -69,13 +69,14 @@ static struct divider_data divider_data = {
 #endif
 };
 
-static int divider_setup(void) {
-	const struct divider_config* cfg = &divider_config;
-	const struct io_channel_config* iocp = &cfg->io_channel;
-	const struct gpio_dt_spec* gcp = &cfg->power_gpios;
-	struct divider_data* ddp = &divider_data;
-	struct adc_sequence* asp = &ddp->adc_seq;
-	struct adc_channel_cfg* accp = &ddp->adc_cfg;
+static int divider_setup(void)
+{
+	const struct divider_config *cfg = &divider_config;
+	const struct io_channel_config *iocp = &cfg->io_channel;
+	const struct gpio_dt_spec *gcp = &cfg->power_gpios;
+	struct divider_data *ddp = &divider_data;
+	struct adc_sequence *asp = &ddp->adc_seq;
+	struct adc_channel_cfg *accp = &ddp->adc_cfg;
 	int rc;
 
 	if (!device_is_ready(ddp->adc)) {
@@ -90,7 +91,8 @@ static int divider_setup(void) {
 		}
 		rc = gpio_pin_configure_dt(gcp, GPIO_OUTPUT_INACTIVE);
 		if (rc != 0) {
-			LOG_ERR("Failed to control feed %s.%u: %d", gcp->port->name, gcp->pin, rc);
+			LOG_ERR("Failed to control feed %s.%u: %d",
+				gcp->port->name, gcp->pin, rc);
 			return rc;
 		}
 	}
@@ -129,10 +131,10 @@ static int divider_setup(void) {
 	};
 
 	if (cfg->output_ohm != 0) {
-		accp->input_positive = 1  // SAADC_CH_PSELP_PSELP_AnalogInput0
-							 + iocp->channel;
+		accp->input_positive = 1 // SAADC_CH_PSELP_PSELP_AnalogInput0
+			+ iocp->channel;
 	} else {
-		accp->input_positive = 9;  // SAADC_CH_PSELP_PSELP_VDD
+		accp->input_positive = 9; // SAADC_CH_PSELP_PSELP_VDD
 	}
 
 	if (iocp->channel == 12) { // VDDHDIV5
@@ -153,7 +155,8 @@ static int divider_setup(void) {
 
 static bool battery_ok;
 
-static int battery_setup() {
+static int battery_setup()
+{
 	int rc = divider_setup();
 
 	battery_ok = (rc == 0);
@@ -163,11 +166,12 @@ static int battery_setup() {
 
 SYS_INIT(battery_setup, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
 
-int battery_measure_enable(bool enable) {
+int battery_measure_enable(bool enable)
+{
 	int rc = -ENOENT;
 
 	if (battery_ok) {
-		const struct gpio_dt_spec* gcp = &divider_config.power_gpios;
+		const struct gpio_dt_spec *gcp = &divider_config.power_gpios;
 
 		rc = 0;
 		if (gcp->port) {
@@ -177,29 +181,30 @@ int battery_measure_enable(bool enable) {
 	return rc;
 }
 
-int battery_sample(void) {
+int battery_sample(void)
+{
 	int rc = -ENOENT;
 
 	if (battery_ok) {
-		struct divider_data* ddp = &divider_data;
-		const struct divider_config* dcp = &divider_config;
-		struct adc_sequence* sp = &ddp->adc_seq;
+		struct divider_data *ddp = &divider_data;
+		const struct divider_config *dcp = &divider_config;
+		struct adc_sequence *sp = &ddp->adc_seq;
 
 		rc = adc_read(ddp->adc, sp);
 		sp->calibrate = false;
 		if (rc == 0) {
 			int32_t val = ddp->raw;
 
-			adc_raw_to_millivolts(
-				adc_ref_internal(ddp->adc),
-				ddp->adc_cfg.gain,
-				sp->resolution,
-				&val
-			);
+			adc_raw_to_millivolts(adc_ref_internal(ddp->adc),
+					      ddp->adc_cfg.gain,
+					      sp->resolution,
+					      &val);
 
 			if (dcp->output_ohm != 0) {
-				rc = val * (uint64_t)dcp->full_ohm / dcp->output_ohm;
-				LOG_INF("raw %u ~ %u mV => %d mV\n", ddp->raw, val, rc);
+				rc = val * (uint64_t)dcp->full_ohm
+					/ dcp->output_ohm;
+				LOG_INF("raw %u ~ %u mV => %d mV\n",
+					ddp->raw, val, rc);
 			} else {
 				rc = val;
 				LOG_INF("raw %u ~ %u mV\n", ddp->raw, val);
@@ -210,16 +215,18 @@ int battery_sample(void) {
 	return rc;
 }
 
-unsigned int
-battery_level_pptt(unsigned int batt_mV, const struct battery_level_point* curve) {
-	const struct battery_level_point* pb = curve;
+unsigned int battery_level_pptt(unsigned int batt_mV,
+				const struct battery_level_point *curve)
+{
+	const struct battery_level_point *pb = curve;
 
 	if (batt_mV >= pb->lvl_mV) {
 		/* Measured voltage above highest point, cap at maximum. */
 		return pb->lvl_pptt;
 	}
 	/* Go down to the last point at or below the measured voltage. */
-	while ((pb->lvl_pptt > 0) && (batt_mV < pb->lvl_mV)) {
+	while ((pb->lvl_pptt > 0)
+	       && (batt_mV < pb->lvl_mV)) {
 		++pb;
 	}
 	if (batt_mV < pb->lvl_mV) {
@@ -228,34 +235,36 @@ battery_level_pptt(unsigned int batt_mV, const struct battery_level_point* curve
 	}
 
 	/* Linear interpolation between below and above points. */
-	const struct battery_level_point* pa = pb - 1;
+	const struct battery_level_point *pa = pb - 1;
 
 	return pb->lvl_pptt
-		 + ((pa->lvl_pptt - pb->lvl_pptt) * (batt_mV - pb->lvl_mV)
-			/ (pa->lvl_mV - pb->lvl_mV));
+	       + ((pa->lvl_pptt - pb->lvl_pptt)
+		  * (batt_mV - pb->lvl_mV)
+		  / (pa->lvl_mV - pb->lvl_mV));
 }
 
 static const struct battery_level_point levels[] = {
 #if CONFIG_BATTERY_USE_REG_BUCK_MAPPING
-	{10000, 4150},
-	{9500, 4075},
-	{3000, 3775},
-	{500, 3450},
-	{0, 3200},
+	{ 10000, 4150 },
+	{ 9500, 4075 },
+	{ 3000, 3775 },
+	{ 500, 3450 },
+	{ 0, 3200 },
 #elif CONFIG_BATTERY_USE_REG_LDO_MAPPING
-	{10000, 4150},
-	{9500, 4025},
-	{3000, 3650},
-	{500, 3400},
-	{0, 3200},
+	{ 10000, 4150 },
+	{ 9500, 4025 },
+	{ 3000, 3650 },
+	{ 500, 3400 },
+	{ 0, 3200 },
 #else
 #warning "Battery voltage map not defined"
-	{10000, 0},
-	{0, 0},
+	{ 10000, 0},
+	{ 0, 0},
 #endif
 };
 
-unsigned int read_batt() {
+int read_batt()
+{
 	int rc = battery_measure_enable(true);
 
 	if (rc != 0) {
@@ -265,16 +274,19 @@ unsigned int read_batt() {
 
 	int batt_mV = battery_sample();
 
-	if (batt_mV < 0) {
-		LOG_DBG("Failed to read battery voltage: %d", batt_mV);
-	}
-
 	battery_measure_enable(false);
+
+	if (batt_mV < 0) {
+		LOG_DBG("Failed to read battery voltage: %d",
+		       batt_mV);
+		return rc;
+	}
 
 	return battery_level_pptt(batt_mV, levels);
 }
 
-unsigned int read_batt_mV(int* out) {
+int read_batt_mV(int *out)
+{
 	int rc = battery_measure_enable(true);
 
 	if (rc != 0) {
@@ -284,11 +296,13 @@ unsigned int read_batt_mV(int* out) {
 
 	int batt_mV = battery_sample();
 
-	if (batt_mV < 0) {
-		LOG_DBG("Failed to read battery voltage: %d", batt_mV);
-	}
-
 	battery_measure_enable(false);
+
+	if (batt_mV < 0) {
+		LOG_DBG("Failed to read battery voltage: %d",
+		       batt_mV);
+		return rc;
+	}
 
 	*out = batt_mV;
 	return battery_level_pptt(batt_mV, levels);

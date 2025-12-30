@@ -25,9 +25,9 @@
 
 #include "interface.h"
 
-const char* sensor_get_sensor_imu_name(void);
-const char* sensor_get_sensor_mag_name(void);
-const char* sensor_get_sensor_fusion_name(void);
+const char *sensor_get_sensor_imu_name(void);
+const char *sensor_get_sensor_mag_name(void);
+const char *sensor_get_sensor_fusion_name(void);
 
 int sensor_request_scan(bool force);
 
@@ -50,23 +50,23 @@ void main_imu_wakeup(void);
 void main_imu_restart(void);
 
 typedef struct sensor_fusion {
-	void (*init)(float, float, float);  // gyro_time, accel_time, mag_time
-	void (*load)(const void*);
-	void (*save)(void*);
+	void (*init)(float, float, float); // gyro_time, accel_time, mag_time
+	void (*load)(const void *);
+	void (*save)(void *);
 
-	void (*update_gyro)(float*, float);  // deg/s
-	void (*update_accel)(float*, float);  // g
-	void (*update_mag)(float*, float);  // any unit (usually gauss)
-	void (*update)(float*, float*, float*, float);
+	void (*update_gyro)(float *, float); // deg/s
+	void (*update_accel)(float *, float); // g
+	void (*update_mag)(float *, float); // any unit (usually gauss)
+	void (*update)(float *, float *, float *, float);
 
-	void (*get_gyro_bias)(float*);
-	void (*set_gyro_bias)(float*);
+	void (*get_gyro_bias)(float *);
+	void (*set_gyro_bias)(float *);
 
-	void (*update_gyro_sanity)(float*, float*);
+	void (*update_gyro_sanity)(float *, float *);
 	int (*get_gyro_sanity)(void);
 
-	void (*get_lin_a)(float*);
-	void (*get_quat)(float*);
+	void (*get_lin_a)(float *);
+	void (*get_quat)(float *);
 } sensor_fusion_t;
 
 typedef struct sensor_imu {

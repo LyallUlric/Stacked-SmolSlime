@@ -23,9 +23,13 @@
 #ifndef SLIMENRF_SENSOR_FUSIONS
 #define SLIMENRF_SENSOR_FUSIONS
 
+#include "fusion_none.h"
+
 #include "motionsense/motionsense.h"
 #include "xiofusion/xiofusion.h"
 #include "vqf/vqf.h"
+
+#define FUSION_COUNT 4
 
 enum fusion {
     FUSION_NONE,
@@ -41,7 +45,7 @@ const char *fusion_names[] = {
     "VQF"
 };
 const sensor_fusion_t *sensor_fusions[] = {
-    NULL,
+    &sensor_fusion_none,
     &sensor_fusion_fusion,
     &sensor_fusion_motionsense,
     &sensor_fusion_vqf

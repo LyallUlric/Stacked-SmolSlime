@@ -25,6 +25,7 @@ static void status_cb(enum usb_dc_status_code status, const uint8_t *param)
 {
 	const struct log_backend *backend = log_backend_get_by_name("log_backend_uart");
 	const struct device *const cons = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
+	bool use_hid = CONFIG_0_SETTINGS_READ(CONFIG_0_CONNECTION_OVER_HID);
 	switch (status)
 	{
 	case USB_DC_RESET:
@@ -35,11 +36,9 @@ static void status_cb(enum usb_dc_status_code status, const uint8_t *param)
 		pm_device_action_run(cons, PM_DEVICE_ACTION_RESUME);
 		log_backend_enable(backend, backend->cb->ctx, CONFIG_LOG_MAX_LEVEL);
 		console_thread_create();
-#if CONFIG_CONNECTION_OVER_HID
-		hid_thread_create();
-#endif
+		if (use_hid)
+			hid_thread_create();
 		break;
-#if CONFIG_CONNECTION_OVER_HID
 	case USB_DC_CONFIGURED:
 		int configurationIndex = *param;
 		if (configurationIndex == 0)
@@ -56,12 +55,10 @@ static void status_cb(enum usb_dc_status_code status, const uint8_t *param)
 			}
 		}
 		break;
-#endif
 	case USB_DC_DISCONNECTED:
 		set_status(SYS_STATUS_USB_CONNECTED, false);
-#if CONFIG_CONNECTION_OVER_HID
-		hid_thread_abort();
-#endif
+		if (use_hid)
+			hid_thread_abort();
 		console_thread_abort();
 		log_backend_disable(backend);
 		pm_device_action_run(cons, PM_DEVICE_ACTION_SUSPEND);

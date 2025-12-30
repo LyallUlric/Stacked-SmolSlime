@@ -103,22 +103,10 @@ static bool sensor_sensor_scanning;
 static bool main_suspended;
 
 static bool mag_available;
-#if MAG_ENABLED
-static bool mag_enabled = true; // TODO: toggle from server
-#else
-static bool mag_enabled = false;
-#endif
+static bool mag_enabled; // TODO: toggle from server
 
-#if CONFIG_SENSOR_USE_XIOFUSION
-static const sensor_fusion_t *sensor_fusion = &sensor_fusion_fusion; // TODO: change from server
-int fusion_id = FUSION_FUSION;
-#elif CONFIG_SENSOR_USE_NXPSENSORFUSION
-static const sensor_fusion_t *sensor_fusion = &sensor_fusion_motionsense; // TODO: change from server
-int fusion_id = FUSION_MOTIONSENSE;
-#elif CONFIG_SENSOR_USE_VQF
-static const sensor_fusion_t *sensor_fusion = &sensor_fusion_vqf; // TODO: change from server
-int fusion_id = FUSION_VQF;
-#endif
+static int fusion_id = 0;
+static const sensor_fusion_t *sensor_fusion = &sensor_fusion_none;
 
 static int sensor_imu_id = -1;
 static int sensor_mag_id = -1;
@@ -171,7 +159,7 @@ const char *sensor_get_sensor_mag_name(void)
 
 const char *sensor_get_sensor_fusion_name(void)
 {
-	if (fusion_id < 0)
+	if (fusion_id < 0 || fusion_id >= FUSION_COUNT)
 		return "None";
 	return fusion_names[fusion_id];
 }
@@ -343,7 +331,7 @@ int sensor_scan(void)
 	{
 		if (mag_id >= (int)ARRAY_SIZE(sensor_mags) || sensor_mags[mag_id] == NULL || sensor_mags[mag_id] == &sensor_mag_none)
 		{
-			sensor_mag = &sensor_mag_none; 
+			sensor_mag = &sensor_mag_none;
 			mag_available = false;
 			LOG_ERR("Magnetometer not supported");
 		}
@@ -355,7 +343,7 @@ int sensor_scan(void)
 	}
 	else
 	{
-		sensor_mag = &sensor_mag_none; 
+		sensor_mag = &sensor_mag_none;
 		mag_available = false; // marked as not available
 	}
 
@@ -392,7 +380,7 @@ int sensor_request_scan(bool force)
 	k_thread_create(&sensor_thread_id, sensor_thread_id_stack, K_THREAD_STACK_SIZEOF(sensor_thread_id_stack), (k_thread_entry_t)sensor_scan_thread, NULL, NULL, NULL, SENSOR_SCAN_THREAD_PRIORITY, 0, K_NO_WAIT);
 	k_thread_join(&sensor_thread_id, K_FOREVER); // wait for the thread to finish
 	if (sensor_sensor_init && force)
-	{		
+	{
 		k_thread_create(&sensor_thread_id, sensor_thread_id_stack, K_THREAD_STACK_SIZEOF(sensor_thread_id_stack), (k_thread_entry_t)sensor_loop, NULL, NULL, NULL, SENSOR_LOOP_THREAD_PRIORITY, K_FP_REGS, K_NO_WAIT);
 		LOG_INF("Started sensor loop");
 	}
@@ -435,13 +423,16 @@ void sensor_scan_clear(void) // TODO: move some of this to sys?
 
 void sensor_retained_read(void) // TODO: move some of this to sys? or move to calibration?
 {
-#if CONFIG_SENSOR_USE_6_SIDE_CALIBRATION
-	LOG_INF("Accelerometer matrix:");
-	for (int i = 0; i < 3; i++)
-		LOG_INF("%.5f %.5f %.5f %.5f", (double)retained->accBAinv[0][i], (double)retained->accBAinv[1][i], (double)retained->accBAinv[2][i], (double)retained->accBAinv[3][i]);
-#else
-	LOG_INF("Accelerometer bias: %.5f %.5f %.5f", (double)retained->accelBias[0], (double)retained->accelBias[1], (double)retained->accelBias[2]);
-#endif
+	if (CONFIG_1_SETTINGS_READ(CONFIG_1_SENSOR_USE_6_SIDE_CALIBRATION))
+	{
+		LOG_INF("Accelerometer matrix:");
+		for (int i = 0; i < 3; i++)
+			LOG_INF("%.5f %.5f %.5f %.5f", (double)retained->accBAinv[0][i], (double)retained->accBAinv[1][i], (double)retained->accBAinv[2][i], (double)retained->accBAinv[3][i]);
+	}
+	else
+	{
+		LOG_INF("Accelerometer bias: %.5f %.5f %.5f", (double)retained->accelBias[0], (double)retained->accelBias[1], (double)retained->accelBias[2]);
+	}
 	LOG_INF("Gyroscope bias: %.5f %.5f %.5f", (double)retained->gyroBias[0], (double)retained->gyroBias[1], (double)retained->gyroBias[2]);
 	if (mag_available && mag_enabled)
 	{
@@ -572,7 +563,7 @@ enum sensor_sensor_timeout {
 static enum sensor_sensor_timeout sensor_timeout = SENSOR_SENSOR_TIMEOUT_IMU;
 
 // Check the IMU gyroscope // TODO: gyro sanity not used
- // TODO: timeouts and power management should be outside sensor! (ie. sleeping/shutdown even if the imu completely errored out)
+ // TODO: timeouts and power management should be outside sensor! (e.g. sleeping/shutdown even if the imu completely errored out)
  // all this really means is that this should be called in sensor loop while the sensor is in an error state
 static void sensor_update_sensor_state(void)
 {
@@ -581,46 +572,40 @@ static void sensor_update_sensor_state(void)
 	if (!calibrating && resting)
 	{
 		int64_t last_data_delta = k_uptime_get() - last_data_time;
-		if (sensor_mode < SENSOR_SENSOR_MODE_LOW_POWER && last_data_delta > CONFIG_SENSOR_LP_TIMEOUT) // No motion in lp timeout
+		if (sensor_mode < SENSOR_SENSOR_MODE_LOW_POWER && last_data_delta > CONFIG_3_SETTINGS_READ(CONFIG_3_SENSOR_LP_TIMEOUT)) // No motion in lp timeout
 		{
-			LOG_INF("No motion from sensors in %dms", CONFIG_SENSOR_LP_TIMEOUT);
+			LOG_INF("No motion from sensors in %dms", CONFIG_3_SETTINGS_READ(CONFIG_3_SENSOR_LP_TIMEOUT));
 			sensor_mode = SENSOR_SENSOR_MODE_LOW_POWER;
 		}
-#if CONFIG_SENSOR_USE_LOW_POWER_2 || CONFIG_USE_IMU_TIMEOUT
-		int64_t imu_timeout = CLAMP(last_data_time - last_suspend_attempt_time, CONFIG_IMU_TIMEOUT_RAMP_MIN, CONFIG_IMU_TIMEOUT_RAMP_MAX); // Ramp timeout from last_data_time
-#endif
-#if CONFIG_SENSOR_USE_LOW_POWER_2
-		if (sensor_mode < SENSOR_SENSOR_MODE_LOW_POWER_2 && last_data_delta > imu_timeout) // No motion in ramp time
+		int64_t imu_timeout = CLAMP(last_data_time - last_suspend_attempt_time, CONFIG_3_SETTINGS_READ(CONFIG_3_IMU_TIMEOUT_RAMP_MIN), CONFIG_3_SETTINGS_READ(CONFIG_3_IMU_TIMEOUT_RAMP_MAX)); // Ramp timeout from last_data_time
+		if (CONFIG_1_SETTINGS_READ(CONFIG_1_SENSOR_USE_LOW_POWER_2) && sensor_mode < SENSOR_SENSOR_MODE_LOW_POWER_2 && last_data_delta > imu_timeout) // No motion in ramp time
 			sensor_mode = SENSOR_SENSOR_MODE_LOW_POWER_2;
-#endif
-#if CONFIG_USE_ACTIVE_TIMEOUT
-		if (sensor_timeout < SENSOR_SENSOR_TIMEOUT_ACTIVITY && last_data_delta > CONFIG_ACTIVE_TIMEOUT_THRESHOLD) // higher priority than IMU timeout
+		if (CONFIG_1_SETTINGS_READ(CONFIG_1_USE_ACTIVE_TIMEOUT))
 		{
-			LOG_INF("Switching to activity timeout");
-			sensor_timeout = SENSOR_SENSOR_TIMEOUT_ACTIVITY;
+			if (sensor_timeout < SENSOR_SENSOR_TIMEOUT_ACTIVITY && last_data_delta > CONFIG_3_SETTINGS_READ(CONFIG_3_ACTIVE_TIMEOUT_THRESHOLD)) // higher priority than IMU timeout
+			{
+				LOG_INF("Switching to activity timeout");
+				sensor_timeout = SENSOR_SENSOR_TIMEOUT_ACTIVITY;
+			}
+			if (sensor_timeout == SENSOR_SENSOR_TIMEOUT_ACTIVITY && last_data_delta > CONFIG_3_SETTINGS_READ(CONFIG_3_ACTIVE_TIMEOUT_DELAY))
+			{
+				LOG_INF("No motion from sensors in %dm", CONFIG_3_SETTINGS_READ(CONFIG_3_ACTIVE_TIMEOUT_DELAY) / 60000);
+				// Queue power state request, it is possible for the request to be overridden so the thread may continue unaware
+				if (CONFIG_2_SETTINGS_READ(CONFIG_2_ACTIVE_TIMEOUT_MODE) == 0 && CONFIG_0_SETTINGS_READ(CONFIG_0_USE_IMU_WAKE_UP))
+					sys_request_WOM(true, false);
+				// Queue power state request, thread will be suspended when entering system_off
+				if (CONFIG_2_SETTINGS_READ(CONFIG_2_ACTIVE_TIMEOUT_MODE) == 1 && CONFIG_0_SETTINGS_READ(CONFIG_0_USER_SHUTDOWN))
+					sys_request_system_off(false);
+				sensor_timeout = SENSOR_SENSOR_TIMEOUT_ACTIVITY_ELAPSED; // only try to suspend once
+			}
 		}
-		if (sensor_timeout == SENSOR_SENSOR_TIMEOUT_ACTIVITY && last_data_delta > CONFIG_ACTIVE_TIMEOUT_DELAY)
-		{
-			LOG_INF("No motion from sensors in %dm", CONFIG_ACTIVE_TIMEOUT_DELAY / 60000);
-#if CONFIG_SLEEP_ON_ACTIVE_TIMEOUT && CONFIG_USE_IMU_WAKE_UP
-			// Queue power state request, it is possible for the request to be overridden so the thread may continue unaware
-			sys_request_WOM(true, false);
-#elif CONFIG_SHUTDOWN_ON_ACTIVE_TIMEOUT && CONFIG_USER_SHUTDOWN
-			// Queue power state request, thread will be suspended when entering system_off
-			sys_request_system_off(false);
-#endif
-			sensor_timeout = SENSOR_SENSOR_TIMEOUT_ACTIVITY_ELAPSED; // only try to suspend once
-		}
-#endif
-#if CONFIG_USE_IMU_TIMEOUT && CONFIG_USE_IMU_WAKE_UP
-		if (sensor_timeout == SENSOR_SENSOR_TIMEOUT_IMU && last_data_delta > imu_timeout) // No motion in ramp time
+		if (CONFIG_1_SETTINGS_READ(CONFIG_1_USE_IMU_TIMEOUT) && CONFIG_0_SETTINGS_READ(CONFIG_0_USE_IMU_WAKE_UP) && sensor_timeout == SENSOR_SENSOR_TIMEOUT_IMU && last_data_delta > imu_timeout) // No motion in ramp time
 		{
 			LOG_INF("No motion from sensors in %llds", imu_timeout / 1000);
 			// Queue power state request
 			sys_request_WOM(false, false);
 			sensor_timeout = SENSOR_SENSOR_TIMEOUT_IMU_ELAPSED; // only try to suspend once
 		}
-#endif
 	}
 	else
 	{
@@ -642,9 +627,8 @@ int sensor_init(void)
 	sensor_imu->shutdown(); // TODO: is this needed?
 
 	float clock_actual_rate = 0;
-#if CONFIG_USE_SENSOR_CLOCK
-	set_sensor_clock(true, 32768, &clock_actual_rate); // enable the clock source for IMU if present
-#endif
+	if (CONFIG_1_SETTINGS_READ(CONFIG_1_USE_SENSOR_CLOCK))
+		set_sensor_clock(true, 32768, &clock_actual_rate); // enable the clock source for IMU if present
 	if (clock_actual_rate != 0)
 		LOG_INF("Sensor clock rate: %.2fHz", (double)clock_actual_rate);
 
@@ -652,16 +636,19 @@ int sensor_init(void)
 	k_usleep(250);
 
 	// set FS/range
-	float accel_range = CONFIG_SENSOR_ACCEL_FS;
-	float gyro_range = CONFIG_SENSOR_GYRO_FS;
+	float accel_range = CONFIG_2_SETTINGS_READ(CONFIG_2_SENSOR_ACCEL_FS);
+	float gyro_range = CONFIG_2_SETTINGS_READ(CONFIG_2_SENSOR_GYRO_FS);
 	float accel_actual_range, gyro_actual_range;
 	sensor_imu->update_fs(accel_range, gyro_range, &accel_actual_range, &gyro_actual_range);
 	LOG_INF("Accelerometer range: %.2fg", (double)accel_actual_range);
 	LOG_INF("Gyroscope range: %.2fdps", (double)gyro_actual_range);
 
+	// get mag enable from config
+	mag_enabled = CONFIG_1_SETTINGS_READ(CONFIG_1_SENSOR_USE_MAG);
+
 	// setup sensor, set ODR
-	float accel_initial_time = 1.0 / CONFIG_SENSOR_ACCEL_ODR; // configure with ~1000Hz ODR
-	float gyro_initial_time = 1.0 / CONFIG_SENSOR_GYRO_ODR; // configure with ~1000Hz ODR
+	float accel_initial_time = 1.0 / CONFIG_2_SETTINGS_READ(CONFIG_2_SENSOR_ACCEL_ODR); // configure with ~1000Hz ODR
+	float gyro_initial_time = 1.0 / CONFIG_2_SETTINGS_READ(CONFIG_2_SENSOR_GYRO_ODR); // configure with ~1000Hz ODR
 	float mag_initial_time = sensor_update_time_ms / 1000.0; // configure with ~200Hz ODR
 	err = sensor_imu->init(clock_actual_rate, accel_initial_time, gyro_initial_time, &accel_actual_time, &gyro_actual_time);
 	sensor_actual_time = MIN(accel_actual_time, gyro_actual_time);
@@ -687,6 +674,10 @@ int sensor_init(void)
 // 0-1ms to setup mmc
 	}
 	LOG_INF("Initialized sensors");
+
+	// get fusion from config
+	fusion_id = CLAMP(CONFIG_2_SETTINGS_READ(CONFIG_2_SENSOR_FUSION), 0, FUSION_COUNT - 1);
+	sensor_fusion = sensor_fusions[fusion_id];
 
 	// Setup fusion
 	sensor_retained_read(); // TODO: useless
@@ -801,25 +792,15 @@ void sensor_loop(void)
 			connection_update_sensor_temp(temp);
 
 			// Read gyroscope (FIFO)
-#if CONFIG_SENSOR_USE_LOW_POWER_2
-			uint8_t* rawData = (uint8_t*)k_malloc(1900);  // Limit FIFO read to 2048 bytes (worst case is ICM 20 byte packet at 1000Hz and 100ms update time)
-			if (rawData == NULL)
+			uint16_t data_size = CONFIG_1_SETTINGS_READ(CONFIG_1_SENSOR_USE_LOW_POWER_2) ? 1900 : 1024; // Limit FIFO read to 2048 bytes (worst case is ICM 20 byte packet at 1000Hz and 100ms update time)
+			uint8_t* raw_data = (uint8_t*)k_malloc(data_size);
+			if (raw_data == NULL)
 			{
 				LOG_ERR("Failed to allocate memory for FIFO buffer");
 				set_status(SYS_STATUS_SENSOR_ERROR, true);
 				main_ok = false;
 			}
-			uint16_t packets = sensor_imu->fifo_read(rawData, 1900); // TODO: name this better?
-#else
-			uint8_t* rawData = (uint8_t*)k_malloc(1024);  // Limit FIFO read to 768 bytes (worst case is ICM 20 byte packet at 1000Hz and 33ms update time)
-			if (rawData == NULL)
-			{
-				LOG_ERR("Failed to allocate memory for FIFO buffer");
-				set_status(SYS_STATUS_SENSOR_ERROR, true);
-				main_ok = false;
-			}
-			uint16_t packets = sensor_imu->fifo_read(rawData, 1024); // TODO: name this better?
-#endif
+			uint16_t packets = sensor_imu->fifo_read(raw_data, data_size); // TODO: name this better?
 
 			// Debug info
 #if DEBUG
@@ -872,7 +853,7 @@ void sensor_loop(void)
 			{
 				float raw_a[3] = {0};
 				float raw_g[3] = {0};
-				if (sensor_imu->fifo_process(i, rawData, raw_a, raw_g))
+				if (sensor_imu->fifo_process(i, raw_data, raw_a, raw_g))
 					continue; // skip on error
 
 				// TODO: split into separate functions
@@ -900,7 +881,7 @@ void sensor_loop(void)
 						sensor_fusion->get_gyro_bias(g_off);
 						for (int i = 0; i < 3; i++)
 							g_off[i] = g[i] - g_off[i];
-	
+
 						// Get the highest gyro speed
 						float gyro_speed_square = g_off[0] * g_off[0] + g_off[1] * g_off[1] + g_off[2] * g_off[2];
 						if (gyro_speed_square > max_gyro_speed_square)
@@ -935,7 +916,7 @@ void sensor_loop(void)
 			int processed_timesteps = MAX(g_count, a_count);
 
 			// Free the FIFO buffer
-			k_free(rawData);
+			k_free(raw_data);
 
 #if DEBUG
 			if (valid_acquisition)
@@ -998,8 +979,8 @@ void sensor_loop(void)
 				packet_errors = 0;
 			}
 
-			// Also check if expected number of timesteps when using FIFO threshold
-			if (processed_timesteps && processed_timesteps != sensor_fifo_threshold)
+			// Also check if expected number of timesteps when using FIFO threshold, if FIFO threshold is being used
+			if (sensor_fifo_threshold && processed_timesteps && processed_timesteps != sensor_fifo_threshold)
 				LOG_WRN("Expected %d timestep%s, got %d", sensor_fifo_threshold, sensor_fifo_threshold == 1 ? "" : "s", processed_timesteps);
 
 			// Update fusion gyro sanity? // TODO: use to detect drift and correct or suspend tracking
@@ -1069,7 +1050,7 @@ void sensor_loop(void)
 			// Handle magnetometer calibration
 			if (mag_available && mag_enabled && last_sensor_mode == SENSOR_SENSOR_MODE_LOW_POWER && sensor_mode == SENSOR_SENSOR_MODE_LOW_POWER)
 				sensor_request_calibration_mag();
-				
+
 #if DEBUG
 			if (valid_acquisition)
 			{

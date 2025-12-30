@@ -328,8 +328,7 @@ uint16_t lsm_fifo_read(uint8_t *data, uint16_t len)
 			LOG_WRN("FIFO read buffer limit reached, %d packets dropped", count - limit);
 			count = limit;
 		}
-		for (int i = 0; i < count; i++)
-			err |= ssi_burst_read(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_FIFO_DATA_OUT_TAG, &data[i * PACKET_SIZE], PACKET_SIZE);
+		err |= ssi_burst_read_interval(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_FIFO_DATA_OUT_TAG, data, count * PACKET_SIZE, PACKET_SIZE);
 		if (err)
 			LOG_ERR("Communication error");
 		data += count * PACKET_SIZE;
