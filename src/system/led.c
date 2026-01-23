@@ -175,15 +175,15 @@ static void led_resume(void)
 #endif
 
 #ifdef LED_RGB_COLOR
-static int led_pwm_period[5][3] = {
-	{CONFIG_LED_DEFAULT_COLOR_R, CONFIG_LED_DEFAULT_COLOR_G, CONFIG_LED_DEFAULT_COLOR_B}, // Default
+static const int led_pwm_period[5][3] = {
+	{-1, -1, -1}, // Default
 	{0, 10000, 0}, // Success
 	{10000, 0, 0}, // Error
 	{8000, 2000, 0}, // Charging
 	{0, 0, 10000}, // Pairing
 };
 #elif defined(LED_TRI_COLOR)
-static int led_pwm_period[5][3] = {
+static const int led_pwm_period[5][3] = {
 	{0, 0, 10000}, // Default
 	{0, 10000, 0}, // Success
 	{10000, 0, 0}, // Error
@@ -191,15 +191,15 @@ static int led_pwm_period[5][3] = {
 	{0, 0, 10000}, // Pairing
 };
 #elif defined(LED_RG_COLOR)
-static int led_pwm_period[5][2] = {
-	{CONFIG_LED_DEFAULT_COLOR_R, CONFIG_LED_DEFAULT_COLOR_G}, // Default
+static const int led_pwm_period[5][2] = {
+	{-1, -1}, // Default
 	{0, 10000}, // Success
 	{10000, 0}, // Error
 	{8000, 2000}, // Charging
 	{4000, 6000}, // Pairing
 };
 #elif defined(LED_DUAL_COLOR)
-static int led_pwm_period[5][2] = {
+static const int led_pwm_period[5][2] = {
 	{0, 10000}, // Default
 	{0, 10000}, // Success
 	{10000, 0}, // Error
@@ -207,7 +207,7 @@ static int led_pwm_period[5][2] = {
 	{0, 10000}, // Pairing
 };
 #else
-static int led_pwm_period[5][1] = {
+static const int led_pwm_period[5][1] = {
 	{10000}, // Default
 	{10000}, // Success
 	{10000}, // Error
@@ -232,13 +232,26 @@ static void led_pin_set(enum sys_led_color color, int brightness_pptt, int value
 #if PWM_LED_EXISTS
 	value_pptt = value_pptt * brightness_pptt / 10000;
 	// only supporting color if PWM is supported
-	pwm_set_pulse_dt(&pwm_led, pwm_led.period / 10000 * (led_pwm_period[color][0] * value_pptt / 10000));
+	if (led_pwm_period[color][0] < 0) // read user color
+	{
+		pwm_set_pulse_dt(&pwm_led, pwm_led.period / 10000 * (CONFIG_2_SETTINGS_READ(CONFIG_2_LED_DEFAULT_COLOR_R) * value_pptt / 10000));
 #if PWM_LED1_EXISTS
-	pwm_set_pulse_dt(&pwm_led1, pwm_led1.period / 10000 * (led_pwm_period[color][1] * value_pptt / 10000));
+		pwm_set_pulse_dt(&pwm_led1, pwm_led1.period / 10000 * (CONFIG_2_SETTINGS_READ(CONFIG_2_LED_DEFAULT_COLOR_G) * value_pptt / 10000));
 #if PWM_LED2_EXISTS
-	pwm_set_pulse_dt(&pwm_led2, pwm_led2.period / 10000 * (led_pwm_period[color][2] * value_pptt / 10000));
+		pwm_set_pulse_dt(&pwm_led2, pwm_led2.period / 10000 * (CONFIG_2_SETTINGS_READ(CONFIG_2_LED_DEFAULT_COLOR_B) * value_pptt / 10000));
 #endif
 #endif
+	}
+	else
+	{
+		pwm_set_pulse_dt(&pwm_led, pwm_led.period / 10000 * (led_pwm_period[color][0] * value_pptt / 10000));
+#if PWM_LED1_EXISTS
+		pwm_set_pulse_dt(&pwm_led1, pwm_led1.period / 10000 * (led_pwm_period[color][1] * value_pptt / 10000));
+#if PWM_LED2_EXISTS
+		pwm_set_pulse_dt(&pwm_led2, pwm_led2.period / 10000 * (led_pwm_period[color][2] * value_pptt / 10000));
+#endif
+#endif
+	}
 #else
 	gpio_pin_set_dt(&led, value_pptt > 5000);
 #endif

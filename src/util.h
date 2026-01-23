@@ -49,16 +49,16 @@
 
 #define CONST_EARTH_GRAVITY 9.80665f
 
-void q_normalize(const float* q, float* out);
-void q_multiply(const float* x, const float* y, float* out);
-void q_conj(const float* q, float* out);
-void q_negate(const float* q, float* out);
-float q_diff_mag(const float* x, const float* y);
-void v_rotate(const float* v, const float* q, float* out);
-float v_avg(const float* a);
-float v_diff_mag(const float* a, const float* b);
-bool q_epsilon(const float* x, const float* y, float eps);
-bool v_epsilon(const float* a, const float* b, float eps);
+void q_normalize(const float *q, float *out);
+void q_multiply(const float *x, const float *y, float *out);
+void q_conj(const float *q, float *out);
+void q_negate(const float *q, float *out);
+float q_diff_mag(const float *x, const float *y);
+void v_rotate(const float *v, const float *q, float *out);
+float v_avg(const float *a);
+float v_diff_mag(const float *a, const float *b);
+bool q_epsilon(const float *x, const float *y, float eps);
+bool v_epsilon(const float *a, const float *b, float eps);
 
 // TODO: does this need to be moved?
 void apply_BAinv(float xyz[3], float BAinv[4][3]);

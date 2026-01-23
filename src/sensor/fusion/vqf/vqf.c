@@ -27,6 +27,7 @@
 #include "../src/vqf.h" // conflicting with vqf.h in local path
 
 #include "../vqf/vqf.h" // conflicting with vqf.h in vqf-c
+#include "sensor/fusion/fusion_none.h"
 
 #ifndef DEG_TO_RAD
 #define DEG_TO_RAD (M_PI / 180.0f)
@@ -133,17 +134,7 @@ void vqf_set_gyro_bias(float *g_off)
 	setBiasEstimate(&state, g_off, -1);
 }
 
-void vqf_update_gyro_sanity(float *g, float *m)
-{
-	// TODO: does vqf tell us a "recovery state"
-	return;
-}
-
-int vqf_get_gyro_sanity(void)
-{
-	// TODO: does vqf tell us a "recovery state"
-	return 0;
-}
+// TODO: does vqf tell us a "recovery state"
 
 void vqf_get_lin_a(float *lin_a)
 {
@@ -189,8 +180,8 @@ const sensor_fusion_t sensor_fusion_vqf = {
 	*vqf_get_gyro_bias,
 	*vqf_set_gyro_bias,
 
-	*vqf_update_gyro_sanity,
-	*vqf_get_gyro_sanity,
+	*fusion_none_update_gyro_sanity,
+	*fusion_none_get_gyro_sanity,
 
 	*vqf_get_lin_a,
 	*vqf_get_quat

@@ -12,7 +12,7 @@ config USE_SLIMENRF_CONSOLE
 
 choice
 	prompt "Battery voltage mapping"
-    default BATTERY_NO_MAPPING
+    default BATTERY_USE_REG_LDO_MAPPING
 
 config BATTERY_USE_REG_BUCK_MAPPING
     bool "Use buck regulator mapping (3.7V battery, DCDC)"
@@ -33,6 +33,13 @@ config BATTERY_NO_MAPPING
       Always map to 100% battery. Disables battery monitoring.
 
 endchoice
+
+config BATTERY_LOW_RUNTIME_THRESHOLD
+    int "Low battery runtime threshold (ms)"
+    default 10800000
+    help
+      Trigger low battery when estimated runtime falls below threshold.
+      If estimated runtime is not available, low battery will trigger under 10% estimated state of charge.
 
 choice
 	prompt "Status LED color mapping"
@@ -104,7 +111,7 @@ config USER_SHUTDOWN
 
 config USE_IMU_WAKE_UP
     bool "IMU wake up support"
-    default n
+    default y
     help
         Use IMU wake up state if IMU wake up is present.
 
@@ -169,7 +176,7 @@ config USE_ACTIVE_TIMEOUT
     help
         Delay IMU wake up state or user shutdown during activity.
 
-choice 
+choice
     prompt "Activity timeout mode"
     default SLEEP_ON_ACTIVE_TIMEOUT
     depends on USE_ACTIVE_TIMEOUT
@@ -217,7 +224,7 @@ config SENSOR_GYRO_ODR
     help
         Requested gyrometer output data rate. Actual rate will be raised to the nearest supported rate.
         A higher rate will increase the time to read and process sensor data.
-        A lower rate is recommended for IMUs with poor gyrometer rate noise density. (Ex. BMI270, LSM6DS3TR-C)
+        A lower rate is recommended for IMUs with poor gyrometer rate noise density. (e.g. BMI270, LSM6DS3TR-C)
 
 config SENSOR_ACCEL_FS
     int "Accelerometer full scale (g)"
@@ -235,7 +242,7 @@ config SENSOR_GYRO_FS
 
 config SENSOR_USE_MAG
     bool "Magnetometer support"
-    default n
+    default y
     help
         Use magnetometer if it is present.
 
@@ -267,7 +274,7 @@ endchoice
 
 config SENSOR_USE_6_SIDE_CALIBRATION
     bool "Use 6-side calibration"
-    default y
+    default n
     depends on USE_SLIMENRF_CONSOLE
     help
         Use 6-side calibration for accelerometer.

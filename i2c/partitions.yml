@@ -1,0 +1,28 @@
+app:
+  address: 0x1000
+  end_address: 0xee000
+  region: flash_primary
+  size: 0xed000
+bootloader:
+  address: 0x0
+  end_address: 0x1000
+  region: flash_primary
+  size: 0x1000
+nvs_storage:
+  address: 0xee000
+  end_address: 0xf4000
+  placement:
+    before:
+    - end
+  region: flash_primary
+  size: 0x6000
+sram_primary:
+  address: 0x20000000
+  end_address: 0x2003f000
+  region: sram_primary
+  size: 0x3f000
+uf2_bootloader:
+  address: 0xf4000
+  end_address: 0x100000
+  region: flash_primary
+  size: 0xc000

@@ -73,9 +73,9 @@ const sensor_imu_t *sensor_imus[] = {
 	&sensor_imu_none, // will not implement, too low quality
 	&sensor_imu_bmi270,
 	&sensor_imu_none,
-	&sensor_imu_none,  // cardinal sin
-	&sensor_imu_none,  // cardinal sin
-	&sensor_imu_none,  // cardinal sin
+	&sensor_imu_none, // cardinal sin
+	&sensor_imu_none, // cardinal sin
+	&sensor_imu_none, // cardinal sin
 	&sensor_imu_none,
 	&sensor_imu_icm42688,
 	&sensor_imu_icm45686,
@@ -86,7 +86,7 @@ const sensor_imu_t *sensor_imus[] = {
 	&sensor_imu_lsm6dso,
 	&sensor_imu_none,
 	&sensor_imu_lsm6dsv,
-	&sensor_imu_lsm6dsv  // compatible with driver
+	&sensor_imu_lsm6dsv // compatible with driver
 };
 const int i2c_dev_imu_addr_count = 2;
 const uint8_t i2c_dev_imu_addr[] = {

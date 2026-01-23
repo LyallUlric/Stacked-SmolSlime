@@ -1,0 +1,7 @@
+default: SlimeVR-Tracker-nRF
+build_dir: C:/Users/Lyall/Documents/GitHub/SlimeVR-Tracker-nRF/i2c
+domains:
+  - name: SlimeVR-Tracker-nRF
+    build_dir: C:/Users/Lyall/Documents/GitHub/SlimeVR-Tracker-nRF/i2c/SlimeVR-Tracker-nRF
+flash_order:
+  - SlimeVR-Tracker-nRF

@@ -204,7 +204,7 @@ static void wait_for_logging(void)
 #endif
 }
 
-#if IMU_INT_EXISTS && CONFIG_DELAY_SLEEP_ON_STATUS
+#if IMU_INT_EXISTS
 static int64_t system_off_timeout = 0;
 #endif
 
@@ -245,8 +245,7 @@ static void sys_WOM(bool force) // TODO: if IMU interrupt does not exist what do
 {
 	LOG_INF("IMU wake up requested");
 #if IMU_INT_EXISTS
-#if CONFIG_DELAY_SLEEP_ON_STATUS
-	if (!force && (!esb_ready() || !status_ready())) // Wait for esb to pair in case the user is still trying to pair the device
+	if (CONFIG_0_SETTINGS_READ(CONFIG_0_DELAY_SLEEP_ON_STATUS) && !force && (!esb_ready() || !status_ready())) // Wait for esb to pair in case the user is still trying to pair the device
 	{
 		if (!system_off_timeout)
 			system_off_timeout = k_uptime_get() + 30000; // allow system off after 30 seconds if status errors are still active
@@ -258,10 +257,9 @@ static void sys_WOM(bool force) // TODO: if IMU interrupt does not exist what do
 		LOG_INF("ESB/status ready timed out");
 		// TODO: this may mean the system never enters system off if sys_request_WOM is not called again after the timeout
 	}
-#endif
 	configure_system_off(); // Common subsystem shutdown and prepare sense pins
 	sensor_retained_write();
-#if WOM_USE_DCDC // In case DCDC is more efficient in the ~10-100uA range
+#if CONFIG_WOM_USE_DCDC // In case DCDC is more efficient in the ~10-100uA range
 	set_regulator(SYS_REGULATOR_DCDC); // Make sure DCDC is selected
 #else
 	set_regulator(SYS_REGULATOR_LDO); // Switch to LDO
@@ -466,6 +464,8 @@ static void power_thread(void)
 
 		int battery_mV;
 		int16_t battery_pptt = read_batt_mV(&battery_mV);
+		if (battery_level_pptt < 0)
+			LOG_ERR("Failed to read battery voltage: %d", battery_pptt);
 		if (samples < BATTERY_SAMPLES)
 			samples++;
 
@@ -523,9 +523,14 @@ static void power_thread(void)
 		// will update average_pptt, and current_battery_pptt
 		update_battery(battery_pptt);
 
-		if (battery_available && !battery_low && current_battery_pptt < 1000)
+		// use estimated remaining runtime or pptt for battery_low
+		uint64_t runtime = sys_get_battery_remaining_time_estimate();
+		bool runtime_valid = runtime > 0;
+		bool runtime_low = k_ticks_to_ms_floor64(runtime) < CONFIG_3_SETTINGS_READ(CONFIG_3_BATTERY_LOW_RUNTIME_THRESHOLD);
+		bool pptt_low = current_battery_pptt < 1000;
+		if (battery_available && !battery_low && (runtime_valid ? runtime_low : pptt_low))
 			battery_low = true;
-		else if (!battery_available || (battery_low && current_battery_pptt > 1000)) // hysteresis alrerady provided
+		else if (!battery_available || (battery_low && (runtime_valid ? !runtime_low : !pptt_low))) // hysteresis already provided
 			battery_low = false;
 
 		sys_update_battery_tracker_voltage(battery_mV, device_plugged);

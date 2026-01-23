@@ -1,0 +1,2 @@
+# Load Zephyr board Kconfig descriptions.
+osource "C:/Users/Lyall/Documents/GitHub/SlimeVR-Tracker-nRF/boards/nordic/promicro_uf2/Kconfig"

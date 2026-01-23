@@ -150,7 +150,7 @@ static int sys_retained_init(void)
 		ram_retention_valid = true;
 	// All contents of NVS was stored in RAM to not need initializing NVS often
 	if (!retained_validate()) // Check ram retention
-	{ 
+	{
 		LOG_WRN("Invalidated RAM");
 		sys_nvs_init();
 		// read from nvs to retained
@@ -162,6 +162,12 @@ static int sys_retained_init(void)
 		sys_read(MAIN_ACC_6_BIAS_ID, &retained->accBAinv, sizeof(retained->accBAinv));
 		sys_read(BATT_STATS_CURVE_ID, &retained->battery_pptt_curve, sizeof(retained->battery_pptt_curve));
 		sys_read(SETTINGS_ID, &retained->settings, sizeof(retained->settings));
+		// restore default settings
+		/* okay to run here, as the only time defaults can change is on newer firmware
+		 * if retain is cleared, defaults are also restored on top of settings stored in nvs (if not overridden by user)
+		 */
+		config_settings_init();
+		// finish retain update
 		retained_update();
 	}
 	else
@@ -236,7 +242,6 @@ void sys_read(uint16_t id, void *data, size_t len)
 
 void sys_clear(void)
 {
-	
 	static bool reset_confirm = false;
 	if (!reset_confirm)
 	{
@@ -246,6 +251,7 @@ void sys_clear(void)
 	}
 	printk("Resetting NVS and retained\n");
 
+	sys_nvs_init();
 	memset(retained, 0, sizeof(*retained));
 	nvs_clear(&fs);
 	nvs_init = false;
@@ -327,6 +333,8 @@ static void button_thread(void)
 		{
 			if (!get_status(SYS_STATUS_BUTTON_PRESSED))
 				set_status(SYS_STATUS_BUTTON_PRESSED, true);
+			if (num_presses == 0 && !CONFIG_0_SETTINGS_READ(CONFIG_0_USER_EXTRA_ACTIONS))
+				connection_update_button(1);
 			num_presses++;
 			LOG_INF("Button pressed %d times", num_presses);
 			last_press_duration = 0;
@@ -337,11 +345,10 @@ static void button_thread(void)
 		{
 			LOG_INF("Button was pressed %d times", num_presses);
 			last_press = 0;
-			if (num_presses == 1)
-				sys_request_system_reboot(false);
-#if CONFIG_USER_EXTRA_ACTIONS // TODO: extra actions are default until server can send commands to trackers
-			sys_reset_mode(num_presses - 1);
-#endif
+//			if (num_presses == 1)
+//				sys_request_system_reboot(false);
+			if (CONFIG_0_SETTINGS_READ(CONFIG_0_USER_EXTRA_ACTIONS)) // TODO: extra actions are default until server can send commands to trackers
+				sys_reset_mode(num_presses - 1);
 			num_presses = 0;
 			set_led(SYS_LED_PATTERN_OFF, SYS_LED_PRIORITY_HIGHEST);
 			set_status(SYS_STATUS_BUTTON_PRESSED, false);
@@ -354,6 +361,10 @@ static void button_thread(void)
 				esb_reset_pair();
 				press_time = 0;
 				set_status(SYS_STATUS_BUTTON_PRESSED, false); // TODO: is needed?
+			}
+			else // shutting down or rebooting
+			{
+				k_thread_abort(button_thread_id);
 			}
 		}
 		k_msleep(20);
@@ -416,31 +427,41 @@ bool stby_read(void)
 int sys_user_shutdown(void)
 {
 	int64_t start_time = k_uptime_get();
-#if USER_SHUTDOWN_ENABLED
-	LOG_INF("User shutdown requested");
-	reboot_counter_write(0);
-	set_led(SYS_LED_PATTERN_ONESHOT_POWEROFF, SYS_LED_PRIORITY_HIGHEST);
-#endif
-	k_msleep(1500);
-	if (button_read()) // If alternate button is available and still pressed, wait for the user to stop pressing the button
+	bool use_shutdown = CONFIG_0_SETTINGS_READ(CONFIG_0_USER_SHUTDOWN);
+	set_led(SYS_LED_PATTERN_OFF_FORCE, SYS_LED_PRIORITY_HIGHEST);
+	bool led_on = false;
+	while (button_read()) // If alternate button is available and still pressed, wait for the user to stop pressing the button
 	{
-		set_led(SYS_LED_PATTERN_LONG, SYS_LED_PRIORITY_HIGHEST);
-		while (button_read())
+		if (!led_on && k_uptime_get() - start_time > 500) // long pattern starts with led on, so delay pattern a bit
 		{
-			if (k_uptime_get() - start_time > 4000) // held for over 5 seconds, cancel shutdown
+			set_led(SYS_LED_PATTERN_LONG, SYS_LED_PRIORITY_HIGHEST);
+			led_on = 1;
+		}
+		if (k_uptime_get() - start_time > 4000) // held for over 5 seconds, cancel shutdown
+		{
+			set_led(SYS_LED_PATTERN_OFF, SYS_LED_PRIORITY_HIGHEST);
+			return 1;
+		}
+		k_msleep(1);
+	}
+	if (use_shutdown)
+	{
+		start_time = k_uptime_get();
+		LOG_INF("User shutdown requested");
+		set_led(SYS_LED_PATTERN_ONESHOT_POWEROFF, SYS_LED_PRIORITY_HIGHEST);
+		reboot_counter_write(0); // shutdown flag
+		while (!button_read()) // waiting for pattern, if button is pressed again reboot immedately
+		{
+			if (k_uptime_get() - start_time > 1250) // length of pattern elapsed
 			{
-				set_led(SYS_LED_PATTERN_OFF, SYS_LED_PRIORITY_HIGHEST);
-				return 1;
+				sys_request_system_off(false);
+				return 0;
 			}
 			k_msleep(1);
 		}
-		set_led(SYS_LED_PATTERN_OFF_FORCE, SYS_LED_PRIORITY_HIGHEST);
 	}
-#if USER_SHUTDOWN_ENABLED
-	sys_request_system_off(false);
-#else
+	set_led(SYS_LED_PATTERN_OFF_FORCE, SYS_LED_PRIORITY_HIGHEST);
 	sys_request_system_reboot(false);
-#endif
 	return 0;
 }
 
@@ -448,12 +469,13 @@ void sys_reset_mode(uint8_t mode)
 {
 	switch (mode)
 	{
-#if CONFIG_USER_EXTRA_ACTIONS
 	case 1:
-		LOG_INF("IMU calibration requested");
-		sensor_request_calibration();
+		if (CONFIG_0_SETTINGS_READ(CONFIG_0_USER_EXTRA_ACTIONS))
+		{
+			LOG_INF("IMU calibration requested");
+			sensor_request_calibration();
+		}
 		break;
-#endif
 	case 2: // Reset mode pairing reset
 		LOG_INF("Pairing reset requested");
 		esb_reset_pair();
