@@ -70,39 +70,39 @@ int main(void)
 		reset_pin_reset = false;
 #endif
 
-	set_led(SYS_LED_PATTERN_ON, SYS_LED_PRIORITY_BOOT); // Boot LED
+	set_led(SYS_LED_PATTERN_ONESHOT_WAKE, SYS_LED_PRIORITY_BOOT); // Boot LED
 
 	uint8_t reboot_counter = reboot_counter_read();
 	bool booting_from_shutdown = !reboot_counter && (reset_pin_reset || button_read()); // 0 means from user shutdown or failed ram validation
 
 	/* if button is not held after booting from shutdown, power off again
 	 * if button press is normal, continue boot
-	 * if button is held for 5 seconds, reset pairing and continue boot
+	 * if button is held for 1 second, reset pairing and continue boot
+	 * if button is held but tracker was waking (not booting from shutdown) ignore the press // TODO: should it pass on to regular handler (e.g. intent to shutdown)
 	 */
 
-	if (button_read())
+	if (booting_from_shutdown)
 	{
-		while (button_read())
-		{
-			if (k_uptime_get() > 1000)
-				set_led(SYS_LED_PATTERN_LONG, SYS_LED_PRIORITY_HIGHEST);
-			if (k_uptime_get() > 5000)
-			{
-				LOG_INF("Pairing requested");
-				esb_reset_pair();
-				break;
-			}
-			k_msleep(1);
-		}
-		if (CONFIG_0_SETTINGS_READ(CONFIG_0_USER_SHUTDOWN) && k_uptime_get() < 50 && booting_from_shutdown) // debounce
-			sys_request_system_off(false);
-		if (k_uptime_get() <= 5000)
-			set_led(SYS_LED_PATTERN_ONESHOT_POWERON, SYS_LED_PRIORITY_HIGHEST);
-		else
-			set_led(SYS_LED_PATTERN_OFF, SYS_LED_PRIORITY_HIGHEST);
-	}
-	else if (booting_from_shutdown)
 		set_led(SYS_LED_PATTERN_ONESHOT_POWERON, SYS_LED_PRIORITY_BOOT);
+		if (button_read())
+		{
+			set_status(SYS_STATUS_BUTTON_PRESSED, true); // prevent going to sleep while still holding
+			int64_t start_time = k_uptime_get();
+			while (button_read())
+			{
+				if (k_uptime_get() - start_time > 1000)
+				{
+					LOG_INF("Pairing requested");
+					esb_reset_pair();
+					break;
+				}
+				k_msleep(1);
+			}
+			if (CONFIG_0_SETTINGS_READ(CONFIG_0_USER_SHUTDOWN) && k_uptime_get() - start_time < 50) // debounce // TODO: does sense pin stay configured?
+				sys_request_system_silent_off(false);
+			set_status(SYS_STATUS_BUTTON_PRESSED, false);
+		}
+	}
 
 	bool docked = dock_read();
 
@@ -140,12 +140,6 @@ int main(void)
 
 		if (reset_mode == 0 && !booting_from_shutdown && !charging && !charged && !plugged) // Reset mode user shutdown, only if unplugged and undocked
 			sys_user_shutdown();
-	}
-
-	if (!booting_from_shutdown) // ONESHOT_POWERON automatically sets LED off
-	{
-		k_usleep(1); // TODO: its possible main is holding exec priority too long and causing stuff to break, very particularly during set_led?
-		set_led(SYS_LED_PATTERN_OFF, SYS_LED_PRIORITY_BOOT);
 	}
 
 	sys_reset_mode(reset_mode);

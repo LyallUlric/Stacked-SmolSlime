@@ -1,7 +1,7 @@
 / {
-	sram0@20007000 {
+	sram0@20007800 {
 		compatible = "zephyr,memory-region", "mmio-sram";
-		reg = <0x20007000 DT_SIZE_K(4)>;
+		reg = <0x20007800 DT_SIZE_K(2)>;
 		zephyr,memory-region = "RETAINED_MEM";
 		status = "okay";
 
@@ -18,5 +18,5 @@
 
 &sram0 {
 	/* Shrink SRAM size to avoid overlap with retained memory region */
-	reg = <0x20000000 DT_SIZE_K(28)>;
+	reg = <0x20000000 DT_SIZE_K(30)>;
 };

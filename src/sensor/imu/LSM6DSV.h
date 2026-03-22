@@ -106,7 +106,7 @@ uint16_t lsm_fifo_read(uint8_t *data, uint16_t len);
 int lsm_fifo_process(uint16_t index, uint8_t *data, float a[3], float g[3]);
 void lsm_accel_read(float a[3]);
 void lsm_gyro_read(float g[3]);
-float lsm_temp_read(void);
+int lsm_temp_read(float *data);
 
 uint8_t lsm_setup_DRDY(uint16_t threshold);
 uint8_t lsm_setup_WOM(void);

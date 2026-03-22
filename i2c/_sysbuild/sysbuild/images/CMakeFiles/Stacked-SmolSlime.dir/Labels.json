@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/CMakeFiles/Stacked-SmolSlime"
+		},
+		{
+			"file" : "C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/CMakeFiles/Stacked-SmolSlime.rule"
+		},
+		{
+			"file" : "C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/CMakeFiles/Stacked-SmolSlime-complete.rule"
+		},
+		{
+			"file" : "C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/Stacked-SmolSlime-prefix/src/Stacked-SmolSlime-stamp/Stacked-SmolSlime-build.rule"
+		},
+		{
+			"file" : "C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/Stacked-SmolSlime-prefix/src/Stacked-SmolSlime-stamp/Stacked-SmolSlime-configure.rule"
+		},
+		{
+			"file" : "C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/Stacked-SmolSlime-prefix/src/Stacked-SmolSlime-stamp/Stacked-SmolSlime-download.rule"
+		},
+		{
+			"file" : "C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/Stacked-SmolSlime-prefix/src/Stacked-SmolSlime-stamp/Stacked-SmolSlime-install.rule"
+		},
+		{
+			"file" : "C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/Stacked-SmolSlime-prefix/src/Stacked-SmolSlime-stamp/Stacked-SmolSlime-mkdir.rule"
+		},
+		{
+			"file" : "C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/Stacked-SmolSlime-prefix/src/Stacked-SmolSlime-stamp/Stacked-SmolSlime-patch.rule"
+		},
+		{
+			"file" : "C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/Stacked-SmolSlime-prefix/src/Stacked-SmolSlime-stamp/Stacked-SmolSlime-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"Stacked-SmolSlime"
+		],
+		"name" : "Stacked-SmolSlime"
+	}
+}

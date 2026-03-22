@@ -34,7 +34,7 @@ uint16_t imu_none_fifo_read(uint8_t *data, uint16_t len);
 int imu_none_fifo_process(uint16_t index, uint8_t *data, float a[3], float g[3]);
 void imu_none_accel_read(float a[3]);
 void imu_none_gyro_read(float g[3]);
-float imu_none_temp_read(void);
+int imu_none_temp_read(float *data);
 
 uint8_t imu_none_setup_WOM(void);
 

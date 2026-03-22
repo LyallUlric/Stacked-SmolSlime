@@ -96,6 +96,12 @@ static const char *meow_suffixes[] = {
 	""
 };
 
+static uint8_t meow_colors[] = {
+	212,
+	176,
+	177
+};
+
 void console_thread_create(void)
 {
 #if USB_EXISTS
@@ -312,13 +318,15 @@ static void print_meow(void)
 {
 	int64_t ticks = k_uptime_ticks();
 
-	ticks %= ARRAY_SIZE(meows) * ARRAY_SIZE(meow_punctuations) * ARRAY_SIZE(meow_suffixes); // silly number generator
-	uint8_t meow = ticks / (ARRAY_SIZE(meow_punctuations) * ARRAY_SIZE(meow_suffixes));
-	ticks %= (ARRAY_SIZE(meow_punctuations) * ARRAY_SIZE(meow_suffixes));
-	uint8_t punctuation = ticks / ARRAY_SIZE(meow_suffixes);
-	uint8_t suffix = ticks % ARRAY_SIZE(meow_suffixes);
+	ticks %= ARRAY_SIZE(meows) * ARRAY_SIZE(meow_punctuations) * ARRAY_SIZE(meow_suffixes) * ARRAY_SIZE(meow_colors); // silly number generator
+	uint8_t meow = ticks / (ARRAY_SIZE(meow_punctuations) * ARRAY_SIZE(meow_suffixes) * ARRAY_SIZE(meow_colors));
+	ticks %= ARRAY_SIZE(meow_punctuations) * ARRAY_SIZE(meow_suffixes) * ARRAY_SIZE(meow_colors);
+	uint8_t punctuation = ticks / (ARRAY_SIZE(meow_suffixes) * ARRAY_SIZE(meow_colors));
+	ticks %= ARRAY_SIZE(meow_suffixes) * ARRAY_SIZE(meow_colors);
+	uint8_t suffix = ticks / ARRAY_SIZE(meow_suffixes);
+	uint8_t color = ticks % ARRAY_SIZE(meow_colors);
 
-	printk("%s%s%s\n", meows[meow], meow_punctuations[punctuation], meow_suffixes[suffix]);
+	printk("\033[38;5;%d;1m%s%s\033[0;38;2;255;255;255m%s\033[0m\n", meow_colors[color], meows[meow], meow_punctuations[punctuation], meow_suffixes[suffix]);
 }
 
 static int32_t parse_config_settings_id(char *s)

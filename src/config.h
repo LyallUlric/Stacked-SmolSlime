@@ -17,7 +17,7 @@ struct config_settings_data {
 	int32_t config_3_settings[16];
 };
 
-// because settings read is a macro, need to expose settings struct and defaults
+// because settings read is a macro, need to expose settings struct
 extern struct config_settings_data *config_settings;
 
 // device settings
@@ -71,23 +71,12 @@ extern const uint16_t config_settings_count[];
 
 extern const char *config_settings_names[];
 
-// because settings read is a macro, need to expose settings struct and defaults
-extern const bool config_0_settings_defaults[16];
-extern const bool config_1_settings_defaults[16];
-//extern const int16_t config_2_settings_defaults[16];
-//extern const int32_t config_3_settings_defaults[16];
-
 #define CONFIG_0_SETTINGS_READ(id) (config_settings->config_0_settings & (1 << id))
 #define CONFIG_1_SETTINGS_READ(id) (config_settings->config_1_settings & (1 << id))
 #define CONFIG_2_SETTINGS_READ(id) (config_settings->config_2_settings[id])
 #define CONFIG_3_SETTINGS_READ(id) (config_settings->config_3_settings[id])
 
 void config_settings_init(void);
-
-//bool config_0_settings_read(uint16_t id);
-//bool config_1_settings_read(uint16_t id);
-//int16_t config_2_settings_read(uint16_t id);
-//int32_t config_3_settings_read(uint16_t id);
 
 void config_0_settings_write(uint16_t id, bool value);
 void config_1_settings_write(uint16_t id, bool value);

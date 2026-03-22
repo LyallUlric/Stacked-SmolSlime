@@ -1,4 +1,4 @@
-# Install script for directory: C:/ncs/v3.1.0/zephyr/share/sysbuild/template
+# Install script for directory: C:/ncs/v3.2.4/zephyr/share/sysbuild/template
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -34,6 +34,6 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("C:/Users/Lyall/Documents/GitHub/SlimeVR-Tracker-nRF/i2c/_sysbuild/sysbuild/images/cmake_install.cmake")
+  include("C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/cmake_install.cmake")
 endif()
 

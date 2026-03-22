@@ -359,20 +359,23 @@ void bmi_gyro_read(float g[3])
 	g[2] = g_bmi[2];
 }
 
-float bmi_temp_read(void)
+int bmi_temp_read(float *data)
 {
 	uint8_t rawTemp[2];
 	int err = ssi_burst_read(SENSOR_INTERFACE_DEV_IMU, BMI270_TEMPERATURE_0, &rawTemp[0], 2);
 	if (err)
+	{
 		LOG_ERR("Communication error");
-	if (rawTemp[0] == 0x00 && rawTemp[1] == 0x80)
-		return 23; // TODO: invalid temperature, what to return?
+		return -1;
+	}
+	if (rawTemp[0] == 0x00 && rawTemp[1] == 0x80) // invalid temperature
+		return 1;
 	// 0x0000 -> 23°C
 	// The resolution is 1/2^9 K/LSB
-	float temp = (int16_t)((((uint16_t)rawTemp[1]) << 8) | rawTemp[0]);
-	temp /= 512;
-	temp += 23;
-	return temp;
+	*data = (int16_t)((((uint16_t)rawTemp[1]) << 8) | rawTemp[0]);
+	*data /= 512;
+	*data += 23;
+	return 0;
 }
 
 uint8_t bmi_setup_DRDY(uint16_t threshold)

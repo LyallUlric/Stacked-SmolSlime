@@ -56,6 +56,8 @@ static bool esb_initialized = false;
 static bool esb_paired = false;
 
 #define TX_ERROR_THRESHOLD 30
+#define TX_ERROR_MAX 100
+#define TX_ERROR_CLEAR_RATE 10
 
 LOG_MODULE_REGISTER(esb_event, LOG_LEVEL_INF);
 
@@ -71,18 +73,27 @@ void event_handler(struct esb_evt const *event)
 	case ESB_EVENT_TX_SUCCESS:
 		if (!paired_addr[0]) // zero, not paired
 			pairing_packets++; // keep track of pairing state
-		if (tx_errors >= TX_ERROR_THRESHOLD)
+		if (tx_errors >= TX_ERROR_THRESHOLD && tx_errors < TX_ERROR_THRESHOLD + TX_ERROR_CLEAR_RATE && last_tx_fail == 0)
+		{
+			last_tx_success = 0; // reset last_tx_success on threshold reached
 			last_tx_fail = k_uptime_get();
-		tx_errors = 0;
+		}
+		if (tx_errors > TX_ERROR_CLEAR_RATE)
+			tx_errors -= TX_ERROR_CLEAR_RATE;
+		else
+			tx_errors = 0;
 		LOG_DBG("TX SUCCESS");
 		if (esb_paired)
 			clocks_stop();
 		break;
 	case ESB_EVENT_TX_FAILED:
-		if (tx_errors < UINT32_MAX)
+		if (tx_errors < TX_ERROR_MAX)
 			tx_errors++;
-		if (tx_errors == TX_ERROR_THRESHOLD) // consecutive failure to transmit
+		if (tx_errors == TX_ERROR_THRESHOLD && last_tx_success == 0) // consecutive failure to transmit
+		{
+			last_tx_fail = 0; // reset last_tx_fail on threshold reached
 			last_tx_success = k_uptime_get();
+		}
 		LOG_DBG("TX FAILED");
 		if (esb_paired)
 			clocks_stop();
@@ -373,7 +384,7 @@ void esb_pair(void)
 			checksum = 8;
 		LOG_INF("Checksum: %02X", checksum);
 		tx_payload_pair.data[0] = checksum; // Use checksum to make sure packet is for this device
-		set_led(SYS_LED_PATTERN_SHORT, SYS_LED_PRIORITY_CONNECTION);
+		set_led(SYS_LED_PATTERN_SHORT, SYS_LED_PRIORITY_PAIR);
 		while (paired_addr[0] != checksum)
 		{
 			int64_t time_begin = k_uptime_get();
@@ -425,7 +436,7 @@ void esb_pair(void)
 			else
 				k_msleep(1000 - time_delta);
 		}
-		set_led(SYS_LED_PATTERN_ONESHOT_COMPLETE, SYS_LED_PRIORITY_CONNECTION);
+		set_led(SYS_LED_PATTERN_ONESHOT_COMPLETE, SYS_LED_PRIORITY_PAIR);
 		LOG_INF("Paired");
 		sys_write(PAIRED_ID, retained->paired_addr, paired_addr, sizeof(paired_addr)); // Write new address and tracker id
 		esb_deinitialize();
@@ -493,7 +504,7 @@ static void esb_thread(void)
 
 	while (1)
 	{
-		if (!esb_paired && (!use_hid || (!get_status(SYS_STATUS_USB_CONNECTED) && k_uptime_get() - 750 > start_time))) // only automatically enter pairing while not potentially communicating by usb
+		if (!esb_paired && (!use_hid || paired_addr[0] || (!get_status(SYS_STATUS_USB_CONNECTED) && k_uptime_get() - 750 > start_time))) // only automatically enter pairing while not potentially communicating by usb, however allow esb if already paired
 		{
 			esb_pair();
 			esb_initialize(true);

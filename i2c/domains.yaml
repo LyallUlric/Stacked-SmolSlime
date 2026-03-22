@@ -1,7 +1,7 @@
-default: SlimeVR-Tracker-nRF
-build_dir: C:/Users/Lyall/Documents/GitHub/SlimeVR-Tracker-nRF/i2c
+default: Stacked-SmolSlime
+build_dir: C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c
 domains:
-  - name: SlimeVR-Tracker-nRF
-    build_dir: C:/Users/Lyall/Documents/GitHub/SlimeVR-Tracker-nRF/i2c/SlimeVR-Tracker-nRF
+  - name: Stacked-SmolSlime
+    build_dir: C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/Stacked-SmolSlime
 flash_order:
-  - SlimeVR-Tracker-nRF
+  - Stacked-SmolSlime

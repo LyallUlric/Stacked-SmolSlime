@@ -40,11 +40,15 @@ static bool battery_low = false;
 static bool plugged = false;
 static bool power_init = false;
 static bool device_plugged = false;
+static bool device_charged = false;
+
+static bool chg_temp_warn = false;
+static int64_t last_valid_temp = -1;
 
 LOG_MODULE_REGISTER(power, LOG_LEVEL_INF);
 
 static void sys_WOM(bool force);
-static void sys_system_off(void);
+static void sys_system_off(bool silent);
 static void sys_system_reboot(void);
 
 static int sys_power_state_request(int id);
@@ -73,6 +77,12 @@ static const struct gpio_dt_spec dcdc_en = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, dc
 static const struct gpio_dt_spec ldo_en = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, ldo_gpios);
 #else
 #pragma message "LDO enable GPIO does not exist"
+#endif
+#if DT_NODE_HAS_PROP(ZEPHYR_USER_NODE, chg_en_gpios)
+#define CHG_EN_EXISTS true
+static const struct gpio_dt_spec chg_en = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, chg_en_gpios);
+#else
+#pragma message "Charge enable GPIO does not exist"
 #endif
 
 #define ADAFRUIT_BOOTLOADER CONFIG_BUILD_OUTPUT_UF2
@@ -188,6 +198,34 @@ static void set_regulator(enum sys_regulator regulator)
 #endif
 }
 
+static int set_charger_enable(bool enable, bool plugged)
+{
+#if CHG_EN_EXISTS
+	static bool last_chg_en = false;
+	if (!plugged)
+		enable = false; // always disable charger if not plugged
+	if (enable != last_chg_en)
+	{
+		last_chg_en = enable;
+		gpio_pin_set_dt(&chg_en, enable);
+		LOG_INF("%s", enable ? "Enabled charger" : "Disabled charger");
+	}
+#elif CONFIG_BATTERY_CHARGER_HAS_NTC
+	// charger has implemented NTC and does not have enable pin, can ignore
+#else
+	static bool err = false;
+	if (!enable && plugged)
+	{
+		if (!err)
+			LOG_ERR("Cannot disable charger");
+		err = true;
+		return -1;
+	}
+	err = false;
+#endif
+	return 0;
+}
+
 static void wait_for_logging(void)
 {
 #if CONFIG_LOG_BACKEND_UART
@@ -225,7 +263,7 @@ void sys_request_system_off(bool immediate)
 {
 	if (immediate)
 	{
-		sys_system_off();
+		sys_system_off(false);
 		return;
 	}
 	sys_power_state_request(3);
@@ -239,6 +277,16 @@ void sys_request_system_reboot(bool immediate)
 		return;
 	}
 	sys_power_state_request(4);
+}
+
+void sys_request_system_silent_off(bool immediate)
+{
+	if (immediate)
+	{
+		sys_system_off(true);
+		return;
+	}
+	sys_power_state_request(5);
 }
 
 static void sys_WOM(bool force) // TODO: if IMU interrupt does not exist what does the system do?
@@ -287,10 +335,13 @@ static void sys_WOM(bool force) // TODO: if IMU interrupt does not exist what do
 #endif
 }
 
-static void sys_system_off(void) // TODO: add timeout
+static void sys_system_off(bool silent) // TODO: add timeout
 {
 	LOG_INF("System off requested");
 	configure_system_off(); // Common subsystem shutdown and prepare sense pins
+	int64_t start_time = k_uptime_get();
+	if (!silent) // indicate shutdown is happening
+		set_led(SYS_LED_PATTERN_ONESHOT_POWEROFF, SYS_LED_PRIORITY_HIGHEST);
 	// Clear sensor addresses
 	sensor_scan_clear();
 	LOG_INF("Requested sensor scan on next boot");
@@ -309,7 +360,16 @@ static void sys_system_off(void) // TODO: add timeout
 	LOG_INF("Powering off nRF");
 	sys_update_battery_tracker(current_battery_pptt, device_plugged);
 //	retained_update();
-	wait_for_logging();
+	if (!silent)
+	{
+		while (k_uptime_get() - start_time < 650) // wait for pattern to complete
+			k_msleep(1);
+		set_led(SYS_LED_PATTERN_OFF_FORCE, SYS_LED_PRIORITY_HIGHEST);
+	}
+	else
+	{
+		wait_for_logging();
+	}
 #if ADAFRUIT_BOOTLOADER // if using Adafruit bootloader, always skip dfu for next boot
 	(*dbl_reset_mem) = DFU_DBL_RESET_APP; // Skip DFU
 #endif
@@ -432,6 +492,8 @@ static void update_battery(int16_t battery_pptt)
 // TODO: call into other thread for handling the system state
 static void power_thread(void)
 {
+	set_led(SYS_LED_PATTERN_ACTIVE_PERSIST, SYS_LED_PRIORITY_SYSTEM); // TODO: allow disabling active pattern?
+
 	while (1)
 	{
 #if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(uart0))
@@ -448,10 +510,13 @@ static void power_thread(void)
 			sys_WOM(true);
 			break;
 		case 3:
-			sys_system_off();
+			sys_system_off(false);
 			break;
 		case 4:
 			sys_system_reboot();
+			break;
+		case 5:
+			sys_system_off(true);
 			break;
 		default:
 			break;
@@ -461,6 +526,34 @@ static void power_thread(void)
 		bool docked = dock_read();
 		bool charging = chg_read();
 		bool charged = stby_read();
+
+		float temp;
+		int chg_ret = sensor_get_sensor_temperature(&temp);
+		switch (chg_ret)
+		{
+		case -2:
+			last_valid_temp = -1;
+			chg_temp_warn = true;
+			break;
+		case -1:
+			if (last_valid_temp == -1)
+				last_valid_temp = k_uptime_get();
+			if (k_uptime_get() - last_valid_temp > 1000) // valid read timeout
+				chg_temp_warn = true;
+			break;
+		case 0:
+			last_valid_temp = k_uptime_get();
+			// https://www.batteryuniversity.com/article/bu-410-charging-at-high-and-low-temperatures/
+			if (!chg_temp_warn && (temp < 5.f || temp > 45.f)) // this is still safe (hard limit is 0C, but that is dangerous)
+				chg_temp_warn = true;
+			else if (chg_temp_warn && temp > 10.f && temp < 40.f) // safest range
+				chg_temp_warn = false;
+		default:
+			break;
+		}
+		chg_ret = set_charger_enable(!chg_temp_warn, device_plugged);
+		// chg_ret = -1: outside safe temp range, but charger could not be disabled
+		// chg_ret = 0 and chg_temp_warn = true: out of temp range, charger is disabled or already has thermistor
 
 		int battery_mV;
 		int16_t battery_pptt = read_batt_mV(&battery_mV);
@@ -494,6 +587,9 @@ static void power_thread(void)
 			set_status(SYS_STATUS_PLUGGED, false);
 		}
 
+		device_charged = charged; // TODO: timer on device_plugged could be used to infer charged state
+
+		static bool adc_abnormal = false;
 		if (!power_init)
 		{
 			// log battery state once
@@ -504,13 +600,13 @@ static void power_thread(void)
 			if (abnormal_reading)
 			{
 				LOG_ERR("Battery voltage reading is abnormal");
-				set_status(SYS_STATUS_SYSTEM_ERROR, true);
+				adc_abnormal = true;
 			}
 			set_regulator(SYS_REGULATOR_DCDC); // Switch to DCDC
 			power_init = true;
 		}
 
-		if (battery_discharged || docked)
+		if ((battery_discharged && !device_plugged) || docked) // TODO: docked may or may not also mean device_plugged due to charging
 		{
 			if (battery_discharged)
 			{
@@ -538,19 +634,30 @@ static void power_thread(void)
 			sys_update_battery_tracker(current_battery_pptt, device_plugged);
 		calibrated_battery_pptt = sys_get_calibrated_battery_pptt(current_battery_pptt);
 
-		connection_update_battery(battery_available, device_plugged, calibrated_battery_pptt, battery_mV);
+		connection_update_battery(battery_available, device_plugged, device_charged, calibrated_battery_pptt, battery_mV);
 
-		if (charging)
-			set_led(SYS_LED_PATTERN_PULSE_PERSIST, SYS_LED_PRIORITY_SYSTEM);
-		else if (charged)
-			set_led(SYS_LED_PATTERN_ON_PERSIST, SYS_LED_PRIORITY_SYSTEM);
-		else if (plugged || usb_plugged)
-			set_led(SYS_LED_PATTERN_PULSE_PERSIST, SYS_LED_PRIORITY_SYSTEM);
-		else if (battery_low)
-			set_led(SYS_LED_PATTERN_LONG_PERSIST, SYS_LED_PRIORITY_SYSTEM);
+		if ((adc_abnormal || chg_ret) && !get_status(SYS_STATUS_SYSTEM_ERROR))
+			set_status(SYS_STATUS_SYSTEM_ERROR, true);
+		else if ((!adc_abnormal && !chg_ret) && get_status(SYS_STATUS_SYSTEM_ERROR))
+			set_status(SYS_STATUS_SYSTEM_ERROR, false);
+
+		if (chg_ret)
+			set_led(SYS_LED_PATTERN_CRITICAL, SYS_LED_PRIORITY_CRITICAL);
 		else
-			set_led(SYS_LED_PATTERN_ACTIVE_PERSIST, SYS_LED_PRIORITY_SYSTEM);
-//			set_led(SYS_LED_PATTERN_OFF, SYS_LED_PRIORITY_SYSTEM);
+			set_led(SYS_LED_PATTERN_OFF, SYS_LED_PRIORITY_CRITICAL);
+
+		if (chg_temp_warn && plugged) // don't need to warn if not plugged in
+			set_led(SYS_LED_PATTERN_WARNING, SYS_LED_PRIORITY_CHARGER); // not critical
+		else if (charging)
+			set_led(SYS_LED_PATTERN_PULSE_PERSIST, SYS_LED_PRIORITY_CHARGER);
+		else if (charged)
+			set_led(SYS_LED_PATTERN_ON_PERSIST, SYS_LED_PRIORITY_CHARGER);
+		else if (plugged || usb_plugged)
+			set_led(SYS_LED_PATTERN_PULSE_PERSIST, SYS_LED_PRIORITY_CHARGER);
+		else if (battery_low)
+			set_led(SYS_LED_PATTERN_LONG_PERSIST, SYS_LED_PRIORITY_CHARGER);
+		else
+			set_led(SYS_LED_PATTERN_OFF, SYS_LED_PRIORITY_CHARGER);
 
 		k_msleep(100);
 	}

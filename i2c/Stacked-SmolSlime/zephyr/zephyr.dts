@@ -1,0 +1,874 @@
+/dts-v1/;
+
+/* node '/' defined in zephyr\dts\common\skeleton.dtsi:9 */
+/ {
+	#address-cells = < 0x1 >;    /* in zephyr\dts\common\skeleton.dtsi:10 */
+	#size-cells = < 0x1 >;       /* in zephyr\dts\common\skeleton.dtsi:11 */
+	model = "promicro_uf2";      /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:71 */
+	compatible = "promicro_uf2"; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:72 */
+
+	/* node '/chosen' defined in zephyr\dts\common\skeleton.dtsi:12 */
+	chosen {
+		zephyr,bt-hci = &bt_hci_sdc;                 /* in zephyr\dts\arm\nordic\nrf52840.dtsi:14 */
+		zephyr,entropy = &cryptocell;                /* in zephyr\dts\arm\nordic\nrf52840.dtsi:15 */
+		zephyr,flash-controller = &flash_controller; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:16 */
+		zephyr,sram = &sram0;                        /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:75 */
+		zephyr,flash = &flash0;                      /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:76 */
+		zephyr,console = &cdc_acm_uart0;             /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:77 */
+		zephyr,shell-uart = &cdc_acm_uart0;          /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:78 */
+	};
+
+	/* node '/aliases' defined in zephyr\dts\common\skeleton.dtsi:13 */
+	aliases {
+		sw0 = &button0;                    /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:97 */
+		pwm-led0 = &pwm_led0;              /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:98 */
+		retainedmemdevice = &retainedmem0; /* in ..\..\Users\Lyall\Documents\GitHub\Stacked-SmolSlime\i2c\Stacked-SmolSlime\zephyr\socs\nrf52840_i2c.overlay:27 */
+	};
+
+	/* node '/soc' defined in zephyr\dts\arm\armv7-m.dtsi:6 */
+	soc {
+		#address-cells = < 0x1 >;     /* in zephyr\dts\arm\armv7-m.dtsi:7 */
+		#size-cells = < 0x1 >;        /* in zephyr\dts\arm\armv7-m.dtsi:8 */
+		interrupt-parent = < &nvic >; /* in zephyr\dts\arm\armv7-m.dtsi:10 */
+		ranges;                       /* in zephyr\dts\arm\armv7-m.dtsi:11 */
+		compatible = "simple-bus";    /* in zephyr\dts\arm\nordic\nrf52840_qiaa.dtsi:29 */
+
+		/* node '/soc/interrupt-controller@e000e100' defined in zephyr\dts\arm\armv7-m.dtsi:13 */
+		nvic: interrupt-controller@e000e100 {
+			#address-cells = < 0x1 >;            /* in zephyr\dts\arm\armv7-m.dtsi:14 */
+			compatible = "arm,v7m-nvic";         /* in zephyr\dts\arm\armv7-m.dtsi:15 */
+			reg = < 0xe000e100 0xc00 >;          /* in zephyr\dts\arm\armv7-m.dtsi:16 */
+			interrupt-controller;                /* in zephyr\dts\arm\armv7-m.dtsi:17 */
+			#interrupt-cells = < 0x2 >;          /* in zephyr\dts\arm\armv7-m.dtsi:18 */
+			arm,num-irq-priority-bits = < 0x3 >; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:585 */
+			phandle = < 0x1 >;                   /* in zephyr\dts\arm\armv7-m.dtsi:10 */
+		};
+
+		/* node '/soc/timer@e000e010' defined in zephyr\dts\arm\armv7-m.dtsi:21 */
+		systick: timer@e000e010 {
+			compatible = "arm,armv7m-systick"; /* in zephyr\dts\arm\armv7-m.dtsi:22 */
+			reg = < 0xe000e010 0x10 >;         /* in zephyr\dts\arm\armv7-m.dtsi:23 */
+			status = "disabled";               /* in zephyr\dts\arm\nordic\nrf52840.dtsi:590 */
+		};
+
+		/* node '/soc/ficr@10000000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:48 */
+		ficr: ficr@10000000 {
+			compatible = "nordic,nrf-ficr"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:49 */
+			reg = < 0x10000000 0x1000 >;    /* in zephyr\dts\arm\nordic\nrf52840.dtsi:50 */
+			#nordic,ficr-cells = < 0x1 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:51 */
+			status = "okay";                /* in zephyr\dts\arm\nordic\nrf52840.dtsi:52 */
+		};
+
+		/* node '/soc/uicr@10001000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:55 */
+		uicr: uicr@10001000 {
+			compatible = "nordic,nrf-uicr"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:56 */
+			reg = < 0x10001000 0x1000 >;    /* in zephyr\dts\arm\nordic\nrf52840.dtsi:57 */
+			status = "okay";                /* in zephyr\dts\arm\nordic\nrf52840.dtsi:58 */
+		};
+
+		/* node '/soc/memory@20000000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:61 */
+		sram0: memory@20000000 {
+			compatible = "mmio-sram";     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:62 */
+			reg = < 0x20000000 0x3f000 >; /* in ..\..\Users\Lyall\Documents\GitHub\Stacked-SmolSlime\i2c\Stacked-SmolSlime\zephyr\socs\nrf52840_i2c.overlay:33 */
+		};
+
+		/* node '/soc/clock@40000000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:65 */
+		clock: clock@40000000 {
+			compatible = "nordic,nrf-clock"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:66 */
+			reg = < 0x40000000 0x1000 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:67 */
+			interrupts = < 0x0 0x1 >;        /* in zephyr\dts\arm\nordic\nrf52840.dtsi:68 */
+			status = "okay";                 /* in zephyr\dts\arm\nordic\nrf52840.dtsi:69 */
+		};
+
+		/* node '/soc/power@40000000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:72 */
+		power: power@40000000 {
+			compatible = "nordic,nrf-power"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:73 */
+			reg = < 0x40000000 0x1000 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:74 */
+			interrupts = < 0x0 0x1 >;        /* in zephyr\dts\arm\nordic\nrf52840.dtsi:75 */
+			status = "okay";                 /* in zephyr\dts\arm\nordic\nrf52840.dtsi:76 */
+			#address-cells = < 0x1 >;        /* in zephyr\dts\arm\nordic\nrf52840.dtsi:77 */
+			#size-cells = < 0x1 >;           /* in zephyr\dts\arm\nordic\nrf52840.dtsi:78 */
+
+			/* node '/soc/power@40000000/gpregret1@4000051c' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:80 */
+			gpregret1: gpregret1@4000051c {
+				#address-cells = < 0x1 >;           /* in zephyr\dts\arm\nordic\nrf52840.dtsi:81 */
+				#size-cells = < 0x1 >;              /* in zephyr\dts\arm\nordic\nrf52840.dtsi:82 */
+				compatible = "nordic,nrf-gpregret"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:83 */
+				reg = < 0x4000051c 0x1 >;           /* in zephyr\dts\arm\nordic\nrf52840.dtsi:84 */
+				status = "okay";                    /* in zephyr\dts\arm\nordic\nrf52840.dtsi:85 */
+			};
+
+			/* node '/soc/power@40000000/gpregret2@40000520' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:88 */
+			gpregret2: gpregret2@40000520 {
+				#address-cells = < 0x1 >;           /* in zephyr\dts\arm\nordic\nrf52840.dtsi:89 */
+				#size-cells = < 0x1 >;              /* in zephyr\dts\arm\nordic\nrf52840.dtsi:90 */
+				compatible = "nordic,nrf-gpregret"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:91 */
+				reg = < 0x40000520 0x1 >;           /* in zephyr\dts\arm\nordic\nrf52840.dtsi:92 */
+				status = "okay";                    /* in zephyr\dts\arm\nordic\nrf52840.dtsi:93 */
+			};
+
+			/* node '/soc/power@40000000/regulator@40000578' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:96 */
+			reg1: regulator@40000578 {
+				compatible = "nordic,nrf5x-regulator"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:97 */
+				reg = < 0x40000578 0x1 >;              /* in zephyr\dts\arm\nordic\nrf52840.dtsi:98 */
+				regulator-name = "REG1";               /* in zephyr\dts\arm\nordic\nrf52840.dtsi:99 */
+				regulator-initial-mode = < 0x1 >;      /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:131 */
+			};
+
+			/* node '/soc/power@40000000/regulator@40000580' defined in zephyr\dts\arm\nordic\nrf52840_qiaa.dtsi:19 */
+			reg0: regulator@40000580 {
+				compatible = "nordic,nrf52x-regulator-hv"; /* in zephyr\dts\arm\nordic\nrf52840_qiaa.dtsi:20 */
+				reg = < 0x40000580 0x1 >;                  /* in zephyr\dts\arm\nordic\nrf52840_qiaa.dtsi:21 */
+				regulator-name = "REG0";                   /* in zephyr\dts\arm\nordic\nrf52840_qiaa.dtsi:22 */
+				status = "okay";                           /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:127 */
+			};
+		};
+
+		/* node '/soc/radio@40001000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:104 */
+		radio: radio@40001000 {
+			compatible = "nordic,nrf-radio"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:105 */
+			reg = < 0x40001000 0x1000 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:106 */
+			interrupts = < 0x1 0x1 >;        /* in zephyr\dts\arm\nordic\nrf52840.dtsi:107 */
+			status = "okay";                 /* in zephyr\dts\arm\nordic\nrf52840.dtsi:108 */
+			ieee802154-supported;            /* in zephyr\dts\arm\nordic\nrf52840.dtsi:109 */
+			ble-2mbps-supported;             /* in zephyr\dts\arm\nordic\nrf52840.dtsi:110 */
+			ble-coded-phy-supported;         /* in zephyr\dts\arm\nordic\nrf52840.dtsi:111 */
+			tx-high-power-supported;         /* in zephyr\dts\arm\nordic\nrf52840.dtsi:112 */
+
+			/* node '/soc/radio@40001000/ieee802154' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:114 */
+			ieee802154: ieee802154 {
+				compatible = "nordic,nrf-ieee802154"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:115 */
+				status = "disabled";                  /* in zephyr\dts\arm\nordic\nrf52840.dtsi:116 */
+			};
+
+			/* node '/soc/radio@40001000/bt_hci_sdc' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:119 */
+			bt_hci_sdc: bt_hci_sdc {
+				compatible = "nordic,bt-hci-sdc"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:120 */
+				status = "okay";                  /* in zephyr\dts\arm\nordic\nrf52840.dtsi:121 */
+			};
+
+			/* node '/soc/radio@40001000/bt_hci_controller' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:123 */
+			bt_hci_controller: bt_hci_controller {
+				compatible = "zephyr,bt-hci-ll-sw-split"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:124 */
+				status = "disabled";                      /* in zephyr\dts\arm\nordic\nrf52840.dtsi:125 */
+			};
+		};
+
+		/* node '/soc/uart@40002000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:129 */
+		uart0: uart@40002000 {
+			compatible = "nordic,nrf-uarte"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:132 */
+			reg = < 0x40002000 0x1000 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:133 */
+			interrupts = < 0x2 0x1 >;        /* in zephyr\dts\arm\nordic\nrf52840.dtsi:134 */
+			status = "disabled";             /* in zephyr\dts\arm\nordic\nrf52840.dtsi:135 */
+		};
+
+		/* node '/soc/i2c@40003000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:138 */
+		i2c0: i2c@40003000 {
+			#address-cells = < 0x1 >;              /* in zephyr\dts\arm\nordic\nrf52840.dtsi:147 */
+			#size-cells = < 0x0 >;                 /* in zephyr\dts\arm\nordic\nrf52840.dtsi:148 */
+			reg = < 0x40003000 0x1000 >;           /* in zephyr\dts\arm\nordic\nrf52840.dtsi:149 */
+			interrupts = < 0x3 0x1 >;              /* in zephyr\dts\arm\nordic\nrf52840.dtsi:150 */
+			easydma-maxcnt-bits = < 0x10 >;        /* in zephyr\dts\arm\nordic\nrf52840.dtsi:151 */
+			zephyr,pm-device-runtime-auto;         /* in zephyr\dts\arm\nordic\nrf52840.dtsi:153 */
+			compatible = "nordic,nrf-twim";        /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:151 */
+			status = "okay";                       /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:152 */
+			zephyr,concat-buf-size = < 0x3ff >;    /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:153 */
+			zephyr,flash-buf-max-size = < 0x3ff >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:154 */
+			clock-frequency = < 0x61a80 >;         /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:155 */
+			pinctrl-0 = < &i2c0_default >;         /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:156 */
+			pinctrl-1 = < &i2c0_sleep >;           /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:157 */
+			pinctrl-names = "default",
+			                "sleep";               /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:158 */
+
+			/* node '/soc/i2c@40003000/imu@0' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:160 */
+			imu: imu@0 {
+				compatible = "i2c-device"; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:161 */
+				label = "imu";             /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:162 */
+				reg = < 0x0 >;             /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:163 */
+			};
+
+			/* node '/soc/i2c@40003000/mag@0' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:166 */
+			mag: mag@0 {
+				compatible = "i2c-device"; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:167 */
+				label = "mag";             /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:168 */
+				reg = < 0x0 >;             /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:169 */
+			};
+		};
+
+		/* node '/soc/spi@40003000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:156 */
+		spi0: spi@40003000 {
+			compatible = "nordic,nrf-spim"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:164 */
+			#address-cells = < 0x1 >;       /* in zephyr\dts\arm\nordic\nrf52840.dtsi:165 */
+			#size-cells = < 0x0 >;          /* in zephyr\dts\arm\nordic\nrf52840.dtsi:166 */
+			reg = < 0x40003000 0x1000 >;    /* in zephyr\dts\arm\nordic\nrf52840.dtsi:167 */
+			interrupts = < 0x3 0x1 >;       /* in zephyr\dts\arm\nordic\nrf52840.dtsi:168 */
+			max-frequency = < 0x7a1200 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:169 */
+			easydma-maxcnt-bits = < 0x10 >; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:170 */
+			status = "disabled";            /* in zephyr\dts\arm\nordic\nrf52840.dtsi:171 */
+		};
+
+		/* node '/soc/i2c@40004000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:174 */
+		i2c1: i2c@40004000 {
+			compatible = "nordic,nrf-twim"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:182 */
+			#address-cells = < 0x1 >;       /* in zephyr\dts\arm\nordic\nrf52840.dtsi:183 */
+			#size-cells = < 0x0 >;          /* in zephyr\dts\arm\nordic\nrf52840.dtsi:184 */
+			reg = < 0x40004000 0x1000 >;    /* in zephyr\dts\arm\nordic\nrf52840.dtsi:185 */
+			interrupts = < 0x4 0x1 >;       /* in zephyr\dts\arm\nordic\nrf52840.dtsi:186 */
+			easydma-maxcnt-bits = < 0x10 >; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:187 */
+			status = "disabled";            /* in zephyr\dts\arm\nordic\nrf52840.dtsi:188 */
+			zephyr,pm-device-runtime-auto;  /* in zephyr\dts\arm\nordic\nrf52840.dtsi:189 */
+		};
+
+		/* node '/soc/spi@40004000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:192 */
+		spi1: spi@40004000 {
+			compatible = "nordic,nrf-spim"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:200 */
+			#address-cells = < 0x1 >;       /* in zephyr\dts\arm\nordic\nrf52840.dtsi:201 */
+			#size-cells = < 0x0 >;          /* in zephyr\dts\arm\nordic\nrf52840.dtsi:202 */
+			reg = < 0x40004000 0x1000 >;    /* in zephyr\dts\arm\nordic\nrf52840.dtsi:203 */
+			interrupts = < 0x4 0x1 >;       /* in zephyr\dts\arm\nordic\nrf52840.dtsi:204 */
+			max-frequency = < 0x7a1200 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:205 */
+			easydma-maxcnt-bits = < 0x10 >; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:206 */
+			status = "disabled";            /* in zephyr\dts\arm\nordic\nrf52840.dtsi:207 */
+		};
+
+		/* node '/soc/nfct@40005000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:210 */
+		nfct: nfct@40005000 {
+			compatible = "nordic,nrf-nfct"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:211 */
+			reg = < 0x40005000 0x1000 >;    /* in zephyr\dts\arm\nordic\nrf52840.dtsi:212 */
+			interrupts = < 0x5 0x1 >;       /* in zephyr\dts\arm\nordic\nrf52840.dtsi:213 */
+			status = "disabled";            /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:201 */
+		};
+
+		/* node '/soc/gpiote@40006000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:217 */
+		gpiote: gpiote0: gpiote@40006000 {
+			compatible = "nordic,nrf-gpiote"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:218 */
+			reg = < 0x40006000 0x1000 >;      /* in zephyr\dts\arm\nordic\nrf52840.dtsi:219 */
+			interrupts = < 0x6 0x5 >;         /* in zephyr\dts\arm\nordic\nrf52840.dtsi:220 */
+			instance = < 0x0 >;               /* in zephyr\dts\arm\nordic\nrf52840.dtsi:222 */
+			status = "okay";                  /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:139 */
+			phandle = < 0x8 >;                /* in zephyr\dts\arm\nordic\nrf52840.dtsi:559 */
+		};
+
+		/* node '/soc/adc@40007000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:225 */
+		adc: adc@40007000 {
+			compatible = "nordic,nrf-saadc"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:226 */
+			reg = < 0x40007000 0x1000 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:227 */
+			interrupts = < 0x7 0x1 >;        /* in zephyr\dts\arm\nordic\nrf52840.dtsi:228 */
+			#io-channel-cells = < 0x1 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:230 */
+			zephyr,pm-device-runtime-auto;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:231 */
+			status = "okay";                 /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:135 */
+			phandle = < 0xd >;               /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:110 */
+		};
+
+		/* node '/soc/timer@40008000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:234 */
+		timer0: timer@40008000 {
+			compatible = "nordic,nrf-timer"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:235 */
+			status = "disabled";             /* in zephyr\dts\arm\nordic\nrf52840.dtsi:236 */
+			reg = < 0x40008000 0x1000 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:237 */
+			cc-num = < 0x4 >;                /* in zephyr\dts\arm\nordic\nrf52840.dtsi:238 */
+			max-bit-width = < 0x20 >;        /* in zephyr\dts\arm\nordic\nrf52840.dtsi:239 */
+			interrupts = < 0x8 0x1 >;        /* in zephyr\dts\arm\nordic\nrf52840.dtsi:240 */
+			prescaler = < 0x0 >;             /* in zephyr\dts\arm\nordic\nrf52840.dtsi:241 */
+		};
+
+		/* node '/soc/timer@40009000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:244 */
+		timer1: timer@40009000 {
+			compatible = "nordic,nrf-timer"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:245 */
+			status = "disabled";             /* in zephyr\dts\arm\nordic\nrf52840.dtsi:246 */
+			reg = < 0x40009000 0x1000 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:247 */
+			cc-num = < 0x4 >;                /* in zephyr\dts\arm\nordic\nrf52840.dtsi:248 */
+			max-bit-width = < 0x20 >;        /* in zephyr\dts\arm\nordic\nrf52840.dtsi:249 */
+			interrupts = < 0x9 0x1 >;        /* in zephyr\dts\arm\nordic\nrf52840.dtsi:250 */
+			prescaler = < 0x0 >;             /* in zephyr\dts\arm\nordic\nrf52840.dtsi:251 */
+			phandle = < 0x9 >;               /* in zephyr\dts\vendor\nordic\nrf_common.dtsi:42 */
+		};
+
+		/* node '/soc/timer@4000a000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:254 */
+		timer2: timer@4000a000 {
+			compatible = "nordic,nrf-timer"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:255 */
+			status = "disabled";             /* in zephyr\dts\arm\nordic\nrf52840.dtsi:256 */
+			reg = < 0x4000a000 0x1000 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:257 */
+			cc-num = < 0x4 >;                /* in zephyr\dts\arm\nordic\nrf52840.dtsi:258 */
+			max-bit-width = < 0x20 >;        /* in zephyr\dts\arm\nordic\nrf52840.dtsi:259 */
+			interrupts = < 0xa 0x1 >;        /* in zephyr\dts\arm\nordic\nrf52840.dtsi:260 */
+			prescaler = < 0x0 >;             /* in zephyr\dts\arm\nordic\nrf52840.dtsi:261 */
+		};
+
+		/* node '/soc/rtc@4000b000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:264 */
+		rtc0: rtc@4000b000 {
+			compatible = "nordic,nrf-rtc"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:265 */
+			reg = < 0x4000b000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:266 */
+			cc-num = < 0x3 >;              /* in zephyr\dts\arm\nordic\nrf52840.dtsi:267 */
+			interrupts = < 0xb 0x1 >;      /* in zephyr\dts\arm\nordic\nrf52840.dtsi:268 */
+			status = "disabled";           /* in zephyr\dts\arm\nordic\nrf52840.dtsi:269 */
+			clock-frequency = < 0x8000 >;  /* in zephyr\dts\arm\nordic\nrf52840.dtsi:270 */
+			prescaler = < 0x1 >;           /* in zephyr\dts\arm\nordic\nrf52840.dtsi:271 */
+		};
+
+		/* node '/soc/temp@4000c000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:274 */
+		temp: temp@4000c000 {
+			compatible = "nordic,nrf-temp"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:275 */
+			reg = < 0x4000c000 0x1000 >;    /* in zephyr\dts\arm\nordic\nrf52840.dtsi:276 */
+			interrupts = < 0xc 0x1 >;       /* in zephyr\dts\arm\nordic\nrf52840.dtsi:277 */
+			status = "okay";                /* in zephyr\dts\arm\nordic\nrf52840.dtsi:278 */
+		};
+
+		/* node '/soc/random@4000d000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:281 */
+		rng: random@4000d000 {
+			compatible = "nordic,nrf-rng"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:282 */
+			reg = < 0x4000d000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:283 */
+			interrupts = < 0xd 0x1 >;      /* in zephyr\dts\arm\nordic\nrf52840.dtsi:284 */
+			status = "okay";               /* in zephyr\dts\arm\nordic\nrf52840.dtsi:285 */
+		};
+
+		/* node '/soc/ecb@4000e000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:288 */
+		ecb: ecb@4000e000 {
+			compatible = "nordic,nrf-ecb"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:289 */
+			reg = < 0x4000e000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:290 */
+			interrupts = < 0xe 0x1 >;      /* in zephyr\dts\arm\nordic\nrf52840.dtsi:291 */
+			status = "okay";               /* in zephyr\dts\arm\nordic\nrf52840.dtsi:292 */
+		};
+
+		/* node '/soc/ccm@4000f000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:295 */
+		ccm: ccm@4000f000 {
+			compatible = "nordic,nrf-ccm"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:296 */
+			reg = < 0x4000f000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:297 */
+			interrupts = < 0xf 0x1 >;      /* in zephyr\dts\arm\nordic\nrf52840.dtsi:298 */
+			length-field-length-8-bits;    /* in zephyr\dts\arm\nordic\nrf52840.dtsi:299 */
+			status = "okay";               /* in zephyr\dts\arm\nordic\nrf52840.dtsi:300 */
+		};
+
+		/* node '/soc/watchdog@40010000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:303 */
+		wdt: wdt0: watchdog@40010000 {
+			compatible = "nordic,nrf-wdt"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:304 */
+			reg = < 0x40010000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:305 */
+			interrupts = < 0x10 0x1 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:306 */
+			status = "okay";               /* in zephyr\dts\arm\nordic\nrf52840.dtsi:307 */
+		};
+
+		/* node '/soc/rtc@40011000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:310 */
+		rtc1: rtc@40011000 {
+			compatible = "nordic,nrf-rtc"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:311 */
+			reg = < 0x40011000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:312 */
+			cc-num = < 0x4 >;              /* in zephyr\dts\arm\nordic\nrf52840.dtsi:313 */
+			interrupts = < 0x11 0x1 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:314 */
+			status = "disabled";           /* in zephyr\dts\arm\nordic\nrf52840.dtsi:315 */
+			clock-frequency = < 0x8000 >;  /* in zephyr\dts\arm\nordic\nrf52840.dtsi:316 */
+			prescaler = < 0x1 >;           /* in zephyr\dts\arm\nordic\nrf52840.dtsi:317 */
+		};
+
+		/* node '/soc/qdec@40012000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:320 */
+		qdec: qdec0: qdec@40012000 {
+			compatible = "nordic,nrf-qdec"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:321 */
+			reg = < 0x40012000 0x1000 >;    /* in zephyr\dts\arm\nordic\nrf52840.dtsi:322 */
+			interrupts = < 0x12 0x1 >;      /* in zephyr\dts\arm\nordic\nrf52840.dtsi:323 */
+			status = "disabled";            /* in zephyr\dts\arm\nordic\nrf52840.dtsi:324 */
+		};
+
+		/* node '/soc/comparator@40013000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:327 */
+		comp: comparator@40013000 {
+			compatible = "nordic,nrf-comp"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:332 */
+			reg = < 0x40013000 0x1000 >;    /* in zephyr\dts\arm\nordic\nrf52840.dtsi:333 */
+			interrupts = < 0x13 0x1 >;      /* in zephyr\dts\arm\nordic\nrf52840.dtsi:334 */
+			status = "disabled";            /* in zephyr\dts\arm\nordic\nrf52840.dtsi:335 */
+		};
+
+		/* node '/soc/egu@40014000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:338 */
+		egu0: swi0: egu@40014000 {
+			compatible = "nordic,nrf-egu",
+			             "nordic,nrf-swi"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:339 */
+			reg = < 0x40014000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:340 */
+			interrupts = < 0x14 0x1 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:341 */
+			status = "okay";               /* in zephyr\dts\arm\nordic\nrf52840.dtsi:342 */
+		};
+
+		/* node '/soc/egu@40015000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:345 */
+		egu1: swi1: egu@40015000 {
+			compatible = "nordic,nrf-egu",
+			             "nordic,nrf-swi"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:346 */
+			reg = < 0x40015000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:347 */
+			interrupts = < 0x15 0x1 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:348 */
+			status = "okay";               /* in zephyr\dts\arm\nordic\nrf52840.dtsi:349 */
+		};
+
+		/* node '/soc/egu@40016000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:352 */
+		egu2: swi2: egu@40016000 {
+			compatible = "nordic,nrf-egu",
+			             "nordic,nrf-swi"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:353 */
+			reg = < 0x40016000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:354 */
+			interrupts = < 0x16 0x1 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:355 */
+			status = "okay";               /* in zephyr\dts\arm\nordic\nrf52840.dtsi:356 */
+		};
+
+		/* node '/soc/egu@40017000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:359 */
+		egu3: swi3: egu@40017000 {
+			compatible = "nordic,nrf-egu",
+			             "nordic,nrf-swi"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:360 */
+			reg = < 0x40017000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:361 */
+			interrupts = < 0x17 0x1 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:362 */
+			status = "okay";               /* in zephyr\dts\arm\nordic\nrf52840.dtsi:363 */
+		};
+
+		/* node '/soc/egu@40018000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:366 */
+		egu4: swi4: egu@40018000 {
+			compatible = "nordic,nrf-egu",
+			             "nordic,nrf-swi"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:367 */
+			reg = < 0x40018000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:368 */
+			interrupts = < 0x18 0x1 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:369 */
+			status = "okay";               /* in zephyr\dts\arm\nordic\nrf52840.dtsi:370 */
+		};
+
+		/* node '/soc/egu@40019000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:373 */
+		egu5: swi5: egu@40019000 {
+			compatible = "nordic,nrf-egu",
+			             "nordic,nrf-swi"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:374 */
+			reg = < 0x40019000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:375 */
+			interrupts = < 0x19 0x1 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:376 */
+			status = "okay";               /* in zephyr\dts\arm\nordic\nrf52840.dtsi:377 */
+		};
+
+		/* node '/soc/timer@4001a000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:380 */
+		timer3: timer@4001a000 {
+			compatible = "nordic,nrf-timer"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:381 */
+			status = "disabled";             /* in zephyr\dts\arm\nordic\nrf52840.dtsi:382 */
+			reg = < 0x4001a000 0x1000 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:383 */
+			cc-num = < 0x6 >;                /* in zephyr\dts\arm\nordic\nrf52840.dtsi:384 */
+			max-bit-width = < 0x20 >;        /* in zephyr\dts\arm\nordic\nrf52840.dtsi:385 */
+			interrupts = < 0x1a 0x1 >;       /* in zephyr\dts\arm\nordic\nrf52840.dtsi:386 */
+			prescaler = < 0x0 >;             /* in zephyr\dts\arm\nordic\nrf52840.dtsi:387 */
+		};
+
+		/* node '/soc/timer@4001b000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:390 */
+		timer4: timer@4001b000 {
+			compatible = "nordic,nrf-timer"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:391 */
+			status = "disabled";             /* in zephyr\dts\arm\nordic\nrf52840.dtsi:392 */
+			reg = < 0x4001b000 0x1000 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:393 */
+			cc-num = < 0x6 >;                /* in zephyr\dts\arm\nordic\nrf52840.dtsi:394 */
+			max-bit-width = < 0x20 >;        /* in zephyr\dts\arm\nordic\nrf52840.dtsi:395 */
+			interrupts = < 0x1b 0x1 >;       /* in zephyr\dts\arm\nordic\nrf52840.dtsi:396 */
+			prescaler = < 0x0 >;             /* in zephyr\dts\arm\nordic\nrf52840.dtsi:397 */
+		};
+
+		/* node '/soc/pwm@4001c000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:400 */
+		pwm0: pwm@4001c000 {
+			compatible = "nordic,nrf-pwm"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:401 */
+			reg = < 0x4001c000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:402 */
+			interrupts = < 0x1c 0x1 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:403 */
+			#pwm-cells = < 0x3 >;          /* in zephyr\dts\arm\nordic\nrf52840.dtsi:405 */
+			status = "okay";               /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:175 */
+			pinctrl-0 = < &pwm0_default >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:176 */
+			pinctrl-1 = < &pwm0_sleep >;   /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:177 */
+			pinctrl-names = "default",
+			                "sleep";       /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:178 */
+			phandle = < 0xa >;             /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:84 */
+		};
+
+		/* node '/soc/pdm@4001d000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:408 */
+		pdm0: pdm@4001d000 {
+			compatible = "nordic,nrf-pdm"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:409 */
+			reg = < 0x4001d000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:410 */
+			interrupts = < 0x1d 0x1 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:411 */
+			status = "disabled";           /* in zephyr\dts\arm\nordic\nrf52840.dtsi:412 */
+		};
+
+		/* node '/soc/acl@4001e000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:415 */
+		acl: acl@4001e000 {
+			compatible = "nordic,nrf-acl"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:416 */
+			reg = < 0x4001e000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:417 */
+			status = "okay";               /* in zephyr\dts\arm\nordic\nrf52840.dtsi:418 */
+		};
+
+		/* node '/soc/flash-controller@4001e000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:421 */
+		flash_controller: flash-controller@4001e000 {
+			compatible = "nordic,nrf52-flash-controller"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:422 */
+			reg = < 0x4001e000 0x1000 >;                  /* in zephyr\dts\arm\nordic\nrf52840.dtsi:423 */
+			partial-erase;                                /* in zephyr\dts\arm\nordic\nrf52840.dtsi:424 */
+			#address-cells = < 0x1 >;                     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:426 */
+			#size-cells = < 0x1 >;                        /* in zephyr\dts\arm\nordic\nrf52840.dtsi:427 */
+
+			/* node '/soc/flash-controller@4001e000/flash@0' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:429 */
+			flash0: flash@0 {
+				compatible = "soc-nv-flash";   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:430 */
+				erase-block-size = < 0x1000 >; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:431 */
+				write-block-size = < 0x4 >;    /* in zephyr\dts\arm\nordic\nrf52840.dtsi:432 */
+				reg = < 0x0 0x100000 >;        /* in zephyr\dts\arm\nordic\nrf52840_qiaa.dtsi:11 */
+			};
+		};
+
+		/* node '/soc/ppi@4001f000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:436 */
+		ppi: ppi@4001f000 {
+			compatible = "nordic,nrf-ppi"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:437 */
+			reg = < 0x4001f000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:438 */
+			status = "okay";               /* in zephyr\dts\arm\nordic\nrf52840.dtsi:439 */
+		};
+
+		/* node '/soc/mwu@40020000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:442 */
+		mwu: mwu@40020000 {
+			compatible = "nordic,nrf-mwu"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:443 */
+			reg = < 0x40020000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:444 */
+			status = "okay";               /* in zephyr\dts\arm\nordic\nrf52840.dtsi:445 */
+		};
+
+		/* node '/soc/pwm@40021000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:448 */
+		pwm1: pwm@40021000 {
+			compatible = "nordic,nrf-pwm"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:449 */
+			reg = < 0x40021000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:450 */
+			interrupts = < 0x21 0x1 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:451 */
+			#pwm-cells = < 0x3 >;          /* in zephyr\dts\arm\nordic\nrf52840.dtsi:453 */
+			status = "okay";               /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:182 */
+			pinctrl-0 = < &pwm1_default >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:183 */
+			pinctrl-1 = < &pwm1_sleep >;   /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:184 */
+			pinctrl-names = "default",
+			                "sleep";       /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:185 */
+			phandle = < 0xc >;             /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:104 */
+		};
+
+		/* node '/soc/pwm@40022000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:456 */
+		pwm2: pwm@40022000 {
+			compatible = "nordic,nrf-pwm"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:457 */
+			reg = < 0x40022000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:458 */
+			interrupts = < 0x22 0x1 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:459 */
+			status = "disabled";           /* in zephyr\dts\arm\nordic\nrf52840.dtsi:460 */
+			#pwm-cells = < 0x3 >;          /* in zephyr\dts\arm\nordic\nrf52840.dtsi:461 */
+		};
+
+		/* node '/soc/spi@40023000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:464 */
+		spi2: spi@40023000 {
+			compatible = "nordic,nrf-spim"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:472 */
+			#address-cells = < 0x1 >;       /* in zephyr\dts\arm\nordic\nrf52840.dtsi:473 */
+			#size-cells = < 0x0 >;          /* in zephyr\dts\arm\nordic\nrf52840.dtsi:474 */
+			reg = < 0x40023000 0x1000 >;    /* in zephyr\dts\arm\nordic\nrf52840.dtsi:475 */
+			interrupts = < 0x23 0x1 >;      /* in zephyr\dts\arm\nordic\nrf52840.dtsi:476 */
+			max-frequency = < 0x7a1200 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:477 */
+			easydma-maxcnt-bits = < 0x10 >; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:478 */
+			status = "disabled";            /* in zephyr\dts\arm\nordic\nrf52840.dtsi:479 */
+		};
+
+		/* node '/soc/rtc@40024000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:482 */
+		rtc2: rtc@40024000 {
+			compatible = "nordic,nrf-rtc"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:483 */
+			reg = < 0x40024000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:484 */
+			cc-num = < 0x4 >;              /* in zephyr\dts\arm\nordic\nrf52840.dtsi:485 */
+			interrupts = < 0x24 0x1 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:486 */
+			status = "disabled";           /* in zephyr\dts\arm\nordic\nrf52840.dtsi:487 */
+			clock-frequency = < 0x8000 >;  /* in zephyr\dts\arm\nordic\nrf52840.dtsi:488 */
+			prescaler = < 0x1 >;           /* in zephyr\dts\arm\nordic\nrf52840.dtsi:489 */
+		};
+
+		/* node '/soc/i2s@40025000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:492 */
+		i2s0: i2s@40025000 {
+			compatible = "nordic,nrf-i2s"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:493 */
+			#address-cells = < 0x1 >;      /* in zephyr\dts\arm\nordic\nrf52840.dtsi:494 */
+			#size-cells = < 0x0 >;         /* in zephyr\dts\arm\nordic\nrf52840.dtsi:495 */
+			reg = < 0x40025000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:496 */
+			interrupts = < 0x25 0x1 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:497 */
+			status = "disabled";           /* in zephyr\dts\arm\nordic\nrf52840.dtsi:498 */
+		};
+
+		/* node '/soc/usbd@40027000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:501 */
+		usbd: zephyr_udc0: usbd@40027000 {
+			reg = < 0x40027000 0x1000 >;    /* in zephyr\dts\arm\nordic\nrf52840.dtsi:503 */
+			interrupts = < 0x27 0x1 >;      /* in zephyr\dts\arm\nordic\nrf52840.dtsi:504 */
+			num-bidir-endpoints = < 0x1 >;  /* in zephyr\dts\arm\nordic\nrf52840.dtsi:505 */
+			num-in-endpoints = < 0x7 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:506 */
+			num-out-endpoints = < 0x7 >;    /* in zephyr\dts\arm\nordic\nrf52840.dtsi:507 */
+			num-isoin-endpoints = < 0x1 >;  /* in zephyr\dts\arm\nordic\nrf52840.dtsi:508 */
+			num-isoout-endpoints = < 0x1 >; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:509 */
+			compatible = "nordic,nrf-usbd"; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:189 */
+			status = "okay";                /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:190 */
+
+			/* node '/soc/usbd@40027000/cdc_acm_uart0' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:191 */
+			cdc_acm_uart0: cdc_acm_uart0 {
+				compatible = "zephyr,cdc-acm-uart"; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:192 */
+			};
+		};
+
+		/* node '/soc/uart@40028000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:513 */
+		uart1: uart@40028000 {
+			compatible = "nordic,nrf-uarte"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:514 */
+			reg = < 0x40028000 0x1000 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:515 */
+			interrupts = < 0x28 0x1 >;       /* in zephyr\dts\arm\nordic\nrf52840.dtsi:516 */
+			status = "disabled";             /* in zephyr\dts\arm\nordic\nrf52840.dtsi:517 */
+		};
+
+		/* node '/soc/qspi@40029000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:520 */
+		qspi: qspi@40029000 {
+			compatible = "nordic,nrf-qspi"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:521 */
+			#address-cells = < 0x1 >;       /* in zephyr\dts\arm\nordic\nrf52840.dtsi:522 */
+			#size-cells = < 0x0 >;          /* in zephyr\dts\arm\nordic\nrf52840.dtsi:523 */
+			reg = < 0x40029000 0x1000 >,
+			      < 0x12000000 0x8000000 >; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:524 */
+			reg-names = "qspi",
+			            "qspi_mm";          /* in zephyr\dts\arm\nordic\nrf52840.dtsi:525 */
+			interrupts = < 0x29 0x1 >;      /* in zephyr\dts\arm\nordic\nrf52840.dtsi:526 */
+			status = "disabled";            /* in zephyr\dts\arm\nordic\nrf52840.dtsi:527 */
+		};
+
+		/* node '/soc/pwm@4002d000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:530 */
+		pwm3: pwm@4002d000 {
+			compatible = "nordic,nrf-pwm"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:531 */
+			reg = < 0x4002d000 0x1000 >;   /* in zephyr\dts\arm\nordic\nrf52840.dtsi:532 */
+			interrupts = < 0x2d 0x1 >;     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:533 */
+			status = "disabled";           /* in zephyr\dts\arm\nordic\nrf52840.dtsi:534 */
+			#pwm-cells = < 0x3 >;          /* in zephyr\dts\arm\nordic\nrf52840.dtsi:535 */
+		};
+
+		/* node '/soc/gpio@50000000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:551 */
+		gpio0: gpio@50000000 {
+			compatible = "nordic,nrf-gpio";              /* in zephyr\dts\arm\nordic\nrf52840.dtsi:552 */
+			gpio-controller;                             /* in zephyr\dts\arm\nordic\nrf52840.dtsi:553 */
+			reg = < 0x50000000 0x200 0x50000500 0x300 >; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:554 */
+			#gpio-cells = < 0x2 >;                       /* in zephyr\dts\arm\nordic\nrf52840.dtsi:556 */
+			port = < 0x0 >;                              /* in zephyr\dts\arm\nordic\nrf52840.dtsi:558 */
+			gpiote-instance = < &gpiote >;               /* in zephyr\dts\arm\nordic\nrf52840.dtsi:559 */
+			status = "okay";                             /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:143 */
+			phandle = < 0xb >;                           /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:91 */
+		};
+
+		/* node '/soc/gpio@50000300' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:562 */
+		gpio1: gpio@50000300 {
+			compatible = "nordic,nrf-gpio";              /* in zephyr\dts\arm\nordic\nrf52840.dtsi:563 */
+			gpio-controller;                             /* in zephyr\dts\arm\nordic\nrf52840.dtsi:564 */
+			reg = < 0x50000300 0x200 0x50000800 0x300 >; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:565 */
+			#gpio-cells = < 0x2 >;                       /* in zephyr\dts\arm\nordic\nrf52840.dtsi:567 */
+			ngpios = < 0x10 >;                           /* in zephyr\dts\arm\nordic\nrf52840.dtsi:568 */
+			port = < 0x1 >;                              /* in zephyr\dts\arm\nordic\nrf52840.dtsi:570 */
+			gpiote-instance = < &gpiote >;               /* in zephyr\dts\arm\nordic\nrf52840.dtsi:571 */
+			status = "okay";                             /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:147 */
+			phandle = < 0xe >;                           /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:120 */
+		};
+
+		/* node '/soc/crypto@5002a000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:574 */
+		cryptocell: crypto@5002a000 {
+			compatible = "arm,cryptocell-310"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:575 */
+			reg = < 0x5002a000 0x1000 >,
+			      < 0x5002b000 0x1000 >;       /* in zephyr\dts\arm\nordic\nrf52840.dtsi:576 */
+			reg-names = "wrapper",
+			            "core";                /* in zephyr\dts\arm\nordic\nrf52840.dtsi:577 */
+			interrupts = < 0x2a 0x1 >;         /* in zephyr\dts\arm\nordic\nrf52840.dtsi:578 */
+			status = "disabled";               /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:197 */
+		};
+	};
+
+	/* node '/pin-controller' defined in zephyr\dts\vendor\nordic\nrf_common.dtsi:26 */
+	pinctrl: pin-controller {
+		compatible = "nordic,nrf-pinctrl"; /* in zephyr\dts\vendor\nordic\nrf_common.dtsi:31 */
+
+		/* node '/pin-controller/i2c0_default' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:9 */
+		i2c0_default: i2c0_default {
+			phandle = < 0x2 >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:156 */
+
+			/* node '/pin-controller/i2c0_default/group1' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:10 */
+			group1 {
+				psels = < 0xc000018 >,
+				        < 0xb000016 >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:11 */
+				bias-disable;          /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:12 */
+			};
+		};
+
+		/* node '/pin-controller/i2c0_sleep' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:16 */
+		i2c0_sleep: i2c0_sleep {
+			phandle = < 0x3 >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:157 */
+
+			/* node '/pin-controller/i2c0_sleep/group1' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:17 */
+			group1 {
+				psels = < 0xc000018 >,
+				        < 0xb000016 >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:18 */
+				bias-disable;          /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:19 */
+				low-power-enable;      /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:20 */
+			};
+		};
+
+		/* node '/pin-controller/pwm0_default' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:24 */
+		pwm0_default: pwm0_default {
+			phandle = < 0x4 >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:176 */
+
+			/* node '/pin-controller/pwm0_default/group1' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:25 */
+			group1 {
+				psels = < 0x1600000f >;      /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:26 */
+				nordic,drive-mode = < 0x4 >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:27 */
+			};
+		};
+
+		/* node '/pin-controller/pwm0_sleep' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:31 */
+		pwm0_sleep: pwm0_sleep {
+			phandle = < 0x5 >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:177 */
+
+			/* node '/pin-controller/pwm0_sleep/group1' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:32 */
+			group1 {
+				psels = < 0x1600000f >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:33 */
+				low-power-enable;       /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:34 */
+			};
+		};
+
+		/* node '/pin-controller/pwm1_default' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:38 */
+		pwm1_default: pwm1_default {
+			phandle = < 0x6 >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:183 */
+
+			/* node '/pin-controller/pwm1_default/group1' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:39 */
+			group1 {
+				psels = < 0x1ff >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:40 */
+			};
+		};
+
+		/* node '/pin-controller/pwm1_sleep' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:44 */
+		pwm1_sleep: pwm1_sleep {
+			phandle = < 0x7 >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:184 */
+
+			/* node '/pin-controller/pwm1_sleep/group1' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:45 */
+			group1 {
+				psels = < 0x1ff >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:46 */
+				low-power-enable;  /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:47 */
+			};
+		};
+
+		/* node '/pin-controller/spi3_default' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:51 */
+		spi3_default: spi3_default {
+
+			/* node '/pin-controller/spi3_default/group1' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:52 */
+			group1 {
+				psels = < 0x600000b >,
+				        < 0x5000018 >,
+				        < 0x4000016 >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:53 */
+			};
+		};
+
+		/* node '/pin-controller/spi3_sleep' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:59 */
+		spi3_sleep: spi3_sleep {
+
+			/* node '/pin-controller/spi3_sleep/group1' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:60 */
+			group1 {
+				psels = < 0x600000b >,
+				        < 0x5000018 >,
+				        < 0x4000016 >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:61 */
+				low-power-enable;      /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:64 */
+			};
+		};
+	};
+
+	/* node '/entropy_bt_hci' defined in zephyr\dts\vendor\nordic\nrf_common.dtsi:34 */
+	rng_hci: entropy_bt_hci {
+		compatible = "zephyr,bt-hci-entropy"; /* in zephyr\dts\vendor\nordic\nrf_common.dtsi:35 */
+		status = "disabled";                  /* in zephyr\dts\vendor\nordic\nrf_common.dtsi:36 */
+	};
+
+	/* node '/sw-pwm' defined in zephyr\dts\vendor\nordic\nrf_common.dtsi:39 */
+	sw_pwm: sw-pwm {
+		compatible = "nordic,nrf-sw-pwm"; /* in zephyr\dts\vendor\nordic\nrf_common.dtsi:40 */
+		status = "disabled";              /* in zephyr\dts\vendor\nordic\nrf_common.dtsi:41 */
+		generator = < &timer1 >;          /* in zephyr\dts\vendor\nordic\nrf_common.dtsi:42 */
+		clock-prescaler = < 0x0 >;        /* in zephyr\dts\vendor\nordic\nrf_common.dtsi:43 */
+		#pwm-cells = < 0x3 >;             /* in zephyr\dts\vendor\nordic\nrf_common.dtsi:44 */
+	};
+
+	/* node '/cpus' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:19 */
+	cpus {
+		#address-cells = < 0x1 >; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:20 */
+		#size-cells = < 0x0 >;    /* in zephyr\dts\arm\nordic\nrf52840.dtsi:21 */
+
+		/* node '/cpus/cpu@0' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:23 */
+		cpu@0 {
+			device_type = "cpu";           /* in zephyr\dts\arm\nordic\nrf52840.dtsi:24 */
+			compatible = "arm,cortex-m4f"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:25 */
+			reg = < 0x0 >;                 /* in zephyr\dts\arm\nordic\nrf52840.dtsi:26 */
+			#address-cells = < 0x1 >;      /* in zephyr\dts\arm\nordic\nrf52840.dtsi:27 */
+			#size-cells = < 0x1 >;         /* in zephyr\dts\arm\nordic\nrf52840.dtsi:28 */
+
+			/* node '/cpus/cpu@0/itm@e0000000' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:30 */
+			itm: itm@e0000000 {
+				compatible = "arm,armv7m-itm";     /* in zephyr\dts\arm\nordic\nrf52840.dtsi:31 */
+				reg = < 0xe0000000 0x1000 >;       /* in zephyr\dts\arm\nordic\nrf52840.dtsi:32 */
+				swo-ref-frequency = < 0x1e84800 >; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:33 */
+			};
+		};
+	};
+
+	/* node '/clocks' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:38 */
+	clocks {
+
+		/* node '/clocks/hfxo' defined in zephyr\dts\arm\nordic\nrf52840.dtsi:39 */
+		hfxo: hfxo {
+			compatible = "nordic,nrf52-hfxo"; /* in zephyr\dts\arm\nordic\nrf52840.dtsi:40 */
+			clock-frequency = < 0x3d09000 >;  /* in zephyr\dts\arm\nordic\nrf52840.dtsi:41 */
+			startup-time-us = < 0x578 >;      /* in zephyr\dts\arm\nordic\nrf52840.dtsi:42 */
+			#clock-cells = < 0x0 >;           /* in zephyr\dts\arm\nordic\nrf52840.dtsi:43 */
+		};
+	};
+
+	/* node '/pwmleds' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:81 */
+	pwmleds {
+		compatible = "pwm-leds"; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:82 */
+
+		/* node '/pwmleds/pwm_led_0' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:83 */
+		pwm_led0: pwm_led_0 {
+			pwms = < &pwm0 0x0 0xf4240 0x0 >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:84 */
+		};
+	};
+
+	/* node '/buttons' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:88 */
+	buttons {
+		compatible = "gpio-keys"; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:89 */
+
+		/* node '/buttons/button_0' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:90 */
+		button0: button_0 {
+			gpios = < &gpio0 0x6 0x11 >;    /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:91 */
+			label = "Push button switch 0"; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:92 */
+		};
+	};
+
+	/* node '/pwmclock' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:101 */
+	pwmclock: pwmclock {
+		compatible = "pwm-clock";        /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:102 */
+		#clock-cells = < 0x1 >;          /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:103 */
+		pwms = < &pwm1 0x0 0x7735 0x0 >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:104 */
+	};
+
+	/* node '/battery-divider' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:107 */
+	battery-divider {
+		compatible = "voltage-divider"; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:108 */
+		status = "okay";                /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:109 */
+		io-channels = < &adc 0xc >;     /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:110 */
+		output-ohms = < 0x1 >;          /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:111 */
+		full-ohms = < 0x5 >;            /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:112 */
+	};
+
+	/* node '/zephyr,user' defined in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:115 */
+	zephyr,user {
+		pwr-gpios = < &gpio0 0x11 0x2 >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:116 */
+		gnd-gpios = < &gpio0 0x14 0x6 >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:117 */
+		int0-gpios = < &gpio0 0x2 0x0 >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:118 */
+		led-gpios = < &gpio0 0xf 0x2 >;  /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:119 */
+		clk-gpios = < &gpio1 0xb 0x6 >;  /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:120 */
+		vcc-gpios = < &gpio0 0x1f 0x0 >; /* in ..\..\Users\Lyall\Documents\GitHub\SlimeVR-Tracker-nRF\boards\nordic\promicro_uf2\promicro_uf2.dts:121 */
+	};
+
+	/* node '/sram0@2003f000' defined in ..\..\Users\Lyall\Documents\GitHub\Stacked-SmolSlime\i2c\Stacked-SmolSlime\zephyr\socs\nrf52840_i2c.overlay:2 */
+	sram0@2003f000 {
+		compatible = "zephyr,memory-region",
+		             "mmio-sram";              /* in ..\..\Users\Lyall\Documents\GitHub\Stacked-SmolSlime\i2c\Stacked-SmolSlime\zephyr\socs\nrf52840_i2c.overlay:3 */
+		reg = < 0x2003f000 0x1000 >;           /* in ..\..\Users\Lyall\Documents\GitHub\Stacked-SmolSlime\i2c\Stacked-SmolSlime\zephyr\socs\nrf52840_i2c.overlay:4 */
+		zephyr,memory-region = "RETAINED_MEM"; /* in ..\..\Users\Lyall\Documents\GitHub\Stacked-SmolSlime\i2c\Stacked-SmolSlime\zephyr\socs\nrf52840_i2c.overlay:5 */
+		status = "okay";                       /* in ..\..\Users\Lyall\Documents\GitHub\Stacked-SmolSlime\i2c\Stacked-SmolSlime\zephyr\socs\nrf52840_i2c.overlay:6 */
+
+		/* node '/sram0@2003f000/retainedmem' defined in ..\..\Users\Lyall\Documents\GitHub\Stacked-SmolSlime\i2c\Stacked-SmolSlime\zephyr\socs\nrf52840_i2c.overlay:8 */
+		retainedmem0: retainedmem {
+			compatible = "zephyr,retained-ram"; /* in ..\..\Users\Lyall\Documents\GitHub\Stacked-SmolSlime\i2c\Stacked-SmolSlime\zephyr\socs\nrf52840_i2c.overlay:9 */
+			status = "okay";                    /* in ..\..\Users\Lyall\Documents\GitHub\Stacked-SmolSlime\i2c\Stacked-SmolSlime\zephyr\socs\nrf52840_i2c.overlay:10 */
+		};
+	};
+
+	/* node '/sram0@20007f7c' defined in ..\..\Users\Lyall\Documents\GitHub\Stacked-SmolSlime\i2c\Stacked-SmolSlime\zephyr\socs\nrf52840_i2c.overlay:14 */
+	sram0@20007f7c {
+		compatible = "zephyr,memory-region",
+		             "mmio-sram";                   /* in ..\..\Users\Lyall\Documents\GitHub\Stacked-SmolSlime\i2c\Stacked-SmolSlime\zephyr\socs\nrf52840_i2c.overlay:15 */
+		reg = < 0x20007f7c 0x4 >;                   /* in ..\..\Users\Lyall\Documents\GitHub\Stacked-SmolSlime\i2c\Stacked-SmolSlime\zephyr\socs\nrf52840_i2c.overlay:16 */
+		zephyr,memory-region = "DFU_DBL_RESET_MEM"; /* in ..\..\Users\Lyall\Documents\GitHub\Stacked-SmolSlime\i2c\Stacked-SmolSlime\zephyr\socs\nrf52840_i2c.overlay:17 */
+		status = "okay";                            /* in ..\..\Users\Lyall\Documents\GitHub\Stacked-SmolSlime\i2c\Stacked-SmolSlime\zephyr\socs\nrf52840_i2c.overlay:18 */
+
+		/* node '/sram0@20007f7c/retainedmem' defined in ..\..\Users\Lyall\Documents\GitHub\Stacked-SmolSlime\i2c\Stacked-SmolSlime\zephyr\socs\nrf52840_i2c.overlay:20 */
+		retainedmem {
+			compatible = "zephyr,retained-ram"; /* in ..\..\Users\Lyall\Documents\GitHub\Stacked-SmolSlime\i2c\Stacked-SmolSlime\zephyr\socs\nrf52840_i2c.overlay:21 */
+			status = "okay";                    /* in ..\..\Users\Lyall\Documents\GitHub\Stacked-SmolSlime\i2c\Stacked-SmolSlime\zephyr\socs\nrf52840_i2c.overlay:22 */
+		};
+	};
+};

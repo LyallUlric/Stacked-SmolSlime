@@ -241,7 +241,7 @@ void sys_update_battery_tracker(int16_t pptt, bool plugged)
 		reset_tracker(-1);
 		update_curve(); // recalculate curve for next discharge
 	}
-	else if (!plugged && retained->min_battery_pptt < 0) // unplugged, reinitialize tracker
+	else if (!plugged && retained->min_battery_pptt < 0 && pptt > 0) // unplugged, reinitialize tracker
 	{
 		LOG_INF("Tracker initialized: %6.2f%%", (double)pptt / 100.0);
 		reset_tracker(pptt);
@@ -544,7 +544,7 @@ void sys_reset_battery_tracker(void)
 	static bool reset_confirm = false;
 	if (!reset_confirm)
 	{
-		printk("Resetting battery tracker will clear all battery calibration data. Are you sure?\n");
+		printk("Resetting battery tracker will clear all battery calibration data. Please resend the command to confirm.\n");
 		reset_confirm = true;
 		return;
 	}

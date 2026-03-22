@@ -1,0 +1,13 @@
+# Target labels
+ Stacked-SmolSlime
+# Source files and their labels
+C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/CMakeFiles/Stacked-SmolSlime
+C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/CMakeFiles/Stacked-SmolSlime.rule
+C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/CMakeFiles/Stacked-SmolSlime-complete.rule
+C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/Stacked-SmolSlime-prefix/src/Stacked-SmolSlime-stamp/Stacked-SmolSlime-build.rule
+C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/Stacked-SmolSlime-prefix/src/Stacked-SmolSlime-stamp/Stacked-SmolSlime-configure.rule
+C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/Stacked-SmolSlime-prefix/src/Stacked-SmolSlime-stamp/Stacked-SmolSlime-download.rule
+C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/Stacked-SmolSlime-prefix/src/Stacked-SmolSlime-stamp/Stacked-SmolSlime-install.rule
+C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/Stacked-SmolSlime-prefix/src/Stacked-SmolSlime-stamp/Stacked-SmolSlime-mkdir.rule
+C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/Stacked-SmolSlime-prefix/src/Stacked-SmolSlime-stamp/Stacked-SmolSlime-patch.rule
+C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/sysbuild/images/Stacked-SmolSlime-prefix/src/Stacked-SmolSlime-stamp/Stacked-SmolSlime-update.rule

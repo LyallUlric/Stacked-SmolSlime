@@ -1,13 +1,15 @@
 {
-  "toolchainPath": "c:\\ncs\\toolchains\\c1a76fddb2",
-  "sdkPath": "c:\\ncs\\v3.1.0",
+  "toolchainPath": "c:\\ncs\\toolchains\\fd21892d0f",
+  "sdkPath": "c:\\ncs\\v3.2.4",
   "board": "promicro_uf2/nrf52840/i2c",
-  "boardDir": "c:\\Users\\Lyall\\Documents\\GitHub\\SlimeVR-Tracker-nRF\\boards\\nordic\\promicro_uf2",
+  "boardDir": "c:\\Users\\Lyall\\Documents\\GitHub\\Stacked-SmolSlime\\boards\\nordic\\promicro_uf2",
   "boardDirs": [
-    "c:\\Users\\Lyall\\Documents\\GitHub\\SlimeVR-Tracker-nRF\\boards\\nordic\\promicro_uf2"
+    "c:\\Users\\Lyall\\Documents\\GitHub\\Stacked-SmolSlime\\boards\\nordic\\promicro_uf2"
   ],
   "optimizations": "none",
-  "cmakeArgs": [],
+  "cmakeArgs": [
+    "-DBOARD_ROOT=c:/users/lyall/documents/github/slimevr-tracker-nrf"
+  ],
   "confFiles": [],
   "buildDirectory": "i2c",
   "kconfigFragments": [],
@@ -16,5 +18,5 @@
     "socs/nrf52840_i2c.overlay"
   ],
   "extraDtcOverlays": [],
-  "boardRoot": "c:\\Users\\Lyall\\Documents\\GitHub\\SlimeVR-Tracker-nRF"
+  "boardRoot": "c:\\Users\\Lyall\\Documents\\GitHub\\Stacked-SmolSlime"
 }

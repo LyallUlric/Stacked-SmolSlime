@@ -388,17 +388,20 @@ void icm_gyro_read(float g[3])
 	}
 }
 
-float icm_temp_read(void)
+int icm_temp_read(float *data)
 {
 	uint8_t rawTemp[2];
 	int err = ssi_burst_read(SENSOR_INTERFACE_DEV_IMU, ICM42688_TEMP_DATA1, &rawTemp[0], 2);
 	if (err)
+	{
 		LOG_ERR("Communication error");
+		return -1;
+	}
 	// Temperature in Degrees Centigrade = (TEMP_DATA / 132.48) + 25
-	float temp = (int16_t)((((uint16_t)rawTemp[0]) << 8) | rawTemp[1]);
-	temp /= 132.48f;
-	temp += 25;
-	return temp;
+	*data = (int16_t)((((uint16_t)rawTemp[0]) << 8) | rawTemp[1]);
+	*data /= 132.48f;
+	*data += 25;
+	return 0;
 }
 
 uint8_t icm_setup_DRDY(uint16_t threshold)
@@ -451,7 +454,7 @@ const sensor_imu_t sensor_imu_icm42688 = {
 
 	*icm_setup_DRDY,
 	*icm_setup_WOM,
-	
+
 	*imu_none_ext_setup,
 	*imu_none_ext_passthrough
 };

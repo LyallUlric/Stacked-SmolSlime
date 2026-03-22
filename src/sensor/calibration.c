@@ -584,7 +584,7 @@ int sensor_offsetBias(float *dest1, float *dest2)
 		return -2; // Timeout
 	int64_t sampling_start_time = k_uptime_get();
 	int i = 0;
-	while (k_uptime_get() < sampling_start_time + 9000)
+	while (k_uptime_get() - sampling_start_time < 3000)
 	{
 		if (sensor_wait_accel(rawData, K_MSEC(1000)))
 			return -2; // Timeout
@@ -680,14 +680,14 @@ int sensor_6_sideBias(float a_inv[][3])
 
 				int64_t sampling_start_time = k_uptime_get();
 				uint8_t i = 0;
-				while (k_uptime_get() < sampling_start_time + 1000)
+				while (k_uptime_get() - sampling_start_time < 1000)
 				{
 					if (sensor_wait_accel(rawData, K_MSEC(1000)))
 						return -2; // Timeout, magneto state not handled here
 					if (!v_epsilon(rawData, pre_acc, 0.1))
 						return -1; // Motion detected
 					magneto_sample(rawData[0], rawData[1], rawData[2], ata, &norm_sum, &sample_count);
-					if (k_uptime_get() >= sampling_start_time + i * 100)
+					if (k_uptime_get() - sampling_start_time >= i * 100)
 					{
 						printk("#");
 						i++;

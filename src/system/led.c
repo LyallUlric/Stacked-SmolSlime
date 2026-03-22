@@ -335,26 +335,31 @@ static void led_thread(void)
 			k_msleep(200);
 			break;
 
-		case SYS_LED_PATTERN_ONESHOT_POWERON:
+		case SYS_LED_PATTERN_ONESHOT_WAKE:
 			led_pattern_state++;
-			led_pin_set(SYS_LED_COLOR_DEFAULT, 10000, !(led_pattern_state % 2) * 10000);
-			if (led_pattern_state == 7)
+			led_pin_set(SYS_LED_COLOR_SUCCESS, 10000, !(led_pattern_state % 2) * 10000);
+			if (led_pattern_state == 3)
 				set_led(SYS_LED_PATTERN_OFF, SYS_LED_PRIORITY_HIGHEST);
 			else
-				k_msleep(200);
+				k_msleep(100);
+			break;
+		case SYS_LED_PATTERN_ONESHOT_POWERON:
+			led_pattern_state++;
+			led_pin_set(SYS_LED_COLOR_SUCCESS, 10000, !(led_pattern_state % 2) * 10000);
+			if (led_pattern_state == 5)
+				set_led(SYS_LED_PATTERN_OFF, SYS_LED_PRIORITY_HIGHEST);
+			else
+				k_msleep(100);
 			break;
 		case SYS_LED_PATTERN_ONESHOT_POWEROFF:
-			if (led_pattern_state++ > 0)
-				led_pin_set(SYS_LED_COLOR_DEFAULT, (202 - led_pattern_state) * 50, (led_pattern_state != 202 ? 10000 : 0));
-			else
-				led_pin_set(SYS_LED_COLOR_DEFAULT, 10000, 0);
-			if (led_pattern_state == 202)
+			led_pattern_state++;
+			led_pin_set(SYS_LED_COLOR_CHARGING, 10000, !(led_pattern_state % 2) * 10000);
+			if (led_pattern_state == 7)
 				set_led(SYS_LED_PATTERN_OFF_FORCE, SYS_LED_PRIORITY_HIGHEST);
-			else if (led_pattern_state == 1)
-				k_msleep(250);
 			else
-				k_msleep(5);
+				k_msleep(100);
 			break;
+
 		case SYS_LED_PATTERN_ONESHOT_PROGRESS:
 			led_pattern_state++;
 			led_pin_set(SYS_LED_COLOR_SUCCESS, 10000, !(led_pattern_state % 2) * 10000);
@@ -422,6 +427,17 @@ static void led_thread(void)
 			led_pattern_state = (led_pattern_state + 1) % 2;
 			led_pin_set(SYS_LED_COLOR_ERROR, 10000, led_pattern_state * 10000);
 			k_msleep(500);
+			break;
+
+		case SYS_LED_PATTERN_WARNING:
+			led_pattern_state = (led_pattern_state + 1) % 2;
+			led_pin_set(SYS_LED_COLOR_CHARGING, 10000, led_pattern_state * 10000);
+			k_msleep(500);
+			break;
+		case SYS_LED_PATTERN_CRITICAL:
+			led_pattern_state = (led_pattern_state + 1) % 2;
+			led_pin_set(SYS_LED_COLOR_ERROR, 10000, led_pattern_state * 10000);
+			k_msleep(100);
 			break;
 
 		default:

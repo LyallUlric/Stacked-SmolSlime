@@ -74,10 +74,10 @@ void imu_none_gyro_read(float g[3])
 	return;
 }
 
-float imu_none_temp_read(void)
+int imu_none_temp_read(float *data)
 {
 	LOG_DBG("imu_none_temp_read, sensor has no IMU or IMU has no temperature register");
-	return 0;
+	return -1;
 }
 
 uint8_t imu_none_setup_DRDY(uint16_t threshold)

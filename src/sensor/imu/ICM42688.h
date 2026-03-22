@@ -120,7 +120,7 @@ uint16_t icm_fifo_read(uint8_t *data, uint16_t len);
 int icm_fifo_process(uint16_t index, uint8_t *data, float a[3], float g[3]);
 void icm_accel_read(float a[3]);
 void icm_gyro_read(float g[3]);
-float icm_temp_read(void);
+int icm_temp_read(float *data);
 
 uint8_t icm_setup_DRDY(uint16_t threshold);
 uint8_t icm_setup_WOM(void);

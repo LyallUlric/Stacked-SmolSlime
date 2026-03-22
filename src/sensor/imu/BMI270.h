@@ -85,7 +85,7 @@ uint16_t bmi_fifo_read(uint8_t *data, uint16_t len);
 int bmi_fifo_process(uint16_t index, uint8_t *data, float a[3], float g[3]);
 void bmi_accel_read(float a[3]);
 void bmi_gyro_read(float g[3]);
-float bmi_temp_read(void);
+int bmi_temp_read(float *data);
 
 uint8_t bmi_setup_DRDY(uint16_t threshold);
 uint8_t bmi_setup_WOM(void);

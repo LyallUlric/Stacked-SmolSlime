@@ -10,6 +10,11 @@ config USE_SLIMENRF_CONSOLE
     help
         Use basic console for commands.
 
+config BATTERY_CHARGER_HAS_NTC
+    bool "Battery thermistor"
+    help
+      Flag for battery NTC thermistor availability.
+
 choice
 	prompt "Battery voltage mapping"
     default BATTERY_USE_REG_LDO_MAPPING
@@ -42,7 +47,7 @@ config BATTERY_LOW_RUNTIME_THRESHOLD
       If estimated runtime is not available, low battery will trigger under 10% estimated state of charge.
 
 choice
-	prompt "Status LED color mapping"
+    prompt "Status LED color mapping"
     default LED_TRI_COLOR
 
 config LED_RGB_COLOR
@@ -111,7 +116,7 @@ config USER_SHUTDOWN
 
 config USE_IMU_WAKE_UP
     bool "IMU wake up support"
-    default y
+    default n
     help
         Use IMU wake up state if IMU wake up is present.
 
@@ -242,7 +247,7 @@ config SENSOR_GYRO_FS
 
 config SENSOR_USE_MAG
     bool "Magnetometer support"
-    default y
+    default n
     help
         Use magnetometer if it is present.
 
@@ -253,7 +258,7 @@ config USE_SENSOR_CLOCK
         Use external IMU clock if it is present.
 
 choice
-	prompt "Sensor fusion"
+    prompt "Sensor fusion"
     default SENSOR_USE_VQF
     help
         Select the sensor fusion method.
@@ -274,7 +279,7 @@ endchoice
 
 config SENSOR_USE_6_SIDE_CALIBRATION
     bool "Use 6-side calibration"
-    default n
+    default y
     depends on USE_SLIMENRF_CONSOLE
     help
         Use 6-side calibration for accelerometer.
@@ -289,7 +294,6 @@ config RADIO_TX_POWER
 
 config CONNECTION_OVER_HID
     bool "Use HID for data output"
-    default n
     help
         Use HID if available.
         Otherwise, use ESB only.

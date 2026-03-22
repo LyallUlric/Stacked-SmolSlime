@@ -390,18 +390,21 @@ void lsm_gyro_read(float g[3])
 	}
 }
 
-float lsm_temp_read(void)
+int lsm_temp_read(float *data)
 {
 	uint8_t rawTemp[2];
 	int err = ssi_burst_read(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_OUT_TEMP_L, &rawTemp[0], 2);
 	if (err)
+	{
 		LOG_ERR("Communication error");
+		return -1;
+	}
 	// TSen Temperature sensitivity 256 LSB/°C
 	// The output of the temperature sensor is 0 LSB (typ.) at 25°C
-	float temp = (int16_t)((((uint16_t)rawTemp[1]) << 8) | rawTemp[0]);
-	temp /= 256;
-	temp += 25;
-	return temp;
+	*data = (int16_t)((((uint16_t)rawTemp[1]) << 8) | rawTemp[0]);
+	*data /= 256;
+	*data += 25;
+	return 0;
 }
 
 uint8_t lsm_setup_DRDY(uint16_t threshold)
@@ -549,7 +552,7 @@ const sensor_imu_t sensor_imu_lsm6dsv = {
 
 	*lsm_setup_DRDY,
 	*lsm_setup_WOM,
-	
+
 	*lsm_ext_setup,
 	*lsm_ext_passthrough
 };

@@ -10,8 +10,10 @@ static int status_state = 0;
 
 LOG_MODULE_REGISTER(status, LOG_LEVEL_INF);
 
-static void status_thread(void);
-K_THREAD_DEFINE(status_thread_id, 256, status_thread, NULL, NULL, NULL, STATUS_THREAD_PRIORITY, 0, 0);
+static void status_error_thread(void);
+K_THREAD_DEFINE(status_error_thread_id, 256, status_error_thread, NULL, NULL, NULL, STATUS_ERROR_THREAD_PRIORITY, 0, 0);
+static void status_warn_thread(void);
+K_THREAD_DEFINE(status_warn_thread_id, 256, status_warn_thread, NULL, NULL, NULL, STATUS_WARN_THREAD_PRIORITY, 0, 0);
 
 void set_status(enum sys_status status, bool set)
 {
@@ -59,29 +61,43 @@ int get_status(enum sys_status status)
 	return status_state & status;
 }
 
-static void status_thread(void)
+static void status_error_thread(void)
 {
 	while (1) // cycle through errors
 	{
-		int status = status_state & (SYS_STATUS_SENSOR_ERROR | SYS_STATUS_CONNECTION_ERROR | SYS_STATUS_SYSTEM_ERROR);
+		int status = status_state & (SYS_STATUS_SENSOR_ERROR | SYS_STATUS_SYSTEM_ERROR);
 		if (status & SYS_STATUS_SENSOR_ERROR)
 		{
-			set_led(SYS_LED_PATTERN_ERROR_A, SYS_LED_PRIORITY_STATUS);
-			k_msleep(5000);
-		}
-		if (status & SYS_STATUS_CONNECTION_ERROR)
-		{
-			set_led(SYS_LED_PATTERN_ERROR_B, SYS_LED_PRIORITY_STATUS);
+			set_led(SYS_LED_PATTERN_ERROR_A, SYS_LED_PRIORITY_ERROR);
 			k_msleep(5000);
 		}
 		if (status & SYS_STATUS_SYSTEM_ERROR)
 		{
-			set_led(SYS_LED_PATTERN_ERROR_C, SYS_LED_PRIORITY_STATUS);
+			set_led(SYS_LED_PATTERN_ERROR_C, SYS_LED_PRIORITY_ERROR);
 			k_msleep(5000);
 		}
 		if (!status)
 		{
-			set_led(SYS_LED_PATTERN_OFF, SYS_LED_PRIORITY_STATUS);
+			set_led(SYS_LED_PATTERN_OFF, SYS_LED_PRIORITY_ERROR);
+			k_msleep(100);
+		}
+	}
+}
+
+static void status_warn_thread(void)
+{
+	// will only show if there are no errors! they are higher priority than warnings
+	while (1) // cycle through warnings
+	{
+		int status = status_state & (SYS_STATUS_CONNECTION_ERROR);
+		if (status & SYS_STATUS_CONNECTION_ERROR)
+		{
+			set_led(SYS_LED_PATTERN_ERROR_B, SYS_LED_PRIORITY_WARN);
+			k_msleep(5000);
+		}
+		if (!status)
+		{
+			set_led(SYS_LED_PATTERN_OFF, SYS_LED_PRIORITY_WARN);
 			k_msleep(100);
 		}
 	}

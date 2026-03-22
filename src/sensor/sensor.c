@@ -80,8 +80,12 @@ static float q3[4] = {SENSOR_QUATERNION_CORRECTION}; // correction quaternion
 
 static float last_lin_a[3] = {0}; // vector to hold last linear accelerometer
 
+static float temp; // sensor temperature
+static int64_t last_temp_time = -1000;
+
 static int64_t last_suspend_attempt_time = 0;
 static int64_t last_data_time;
+static int64_t sensor_timeout_time = INT64_MAX;
 
 static float max_gyro_speed_square;
 static bool mag_use_oneshot;
@@ -146,7 +150,7 @@ static const struct gpio_dt_spec int0 = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, int0_
 const char *sensor_get_sensor_imu_name(void)
 {
 	if (sensor_imu_id < 0)
-		return "None";
+		return "\033[38;5;196;1mNone\033[0m"; // color 196 (bright red), intense/bold
 	return dev_imu_names[sensor_imu_id];
 }
 
@@ -162,6 +166,19 @@ const char *sensor_get_sensor_fusion_name(void)
 	if (fusion_id < 0 || fusion_id >= FUSION_COUNT)
 		return "None";
 	return fusion_names[fusion_id];
+}
+
+int sensor_get_sensor_temperature(float *ptr)
+{
+	if (sensor_imu == &sensor_imu_none || (k_uptime_get() - last_temp_time > 1000))
+	{
+		if (get_status(SYS_STATUS_SENSOR_ERROR))
+			return -2; // no imu!
+		else
+			return -1; // imu probably not scanned yet or temp not read yet or last valid temp is old
+	}
+	*ptr = temp;
+	return 0;
 }
 
 void sensor_scan_thread(void)
@@ -366,7 +383,7 @@ int sensor_request_scan(bool force)
 		return 0; // already initialized
 	main_imu_suspend();
 	k_thread_abort(&sensor_thread_id); // stop the sensor thread // TODO: may need to handle fusion state
-	LOG_INF("Aborted sensor thread");
+	LOG_INF("Stopped sensor thread");
 	main_suspended = false;
 	sensor_sensor_init = false;
 	if (force)
@@ -516,7 +533,7 @@ static void set_update_time_ms(int time_ms)
 #if IMU_INT_EXISTS
 	float fifo_threshold = time_ms / 1000.0f / sensor_actual_time; // target loop rate
 	sensor_fifo_threshold = fifo_threshold;
-	LOG_INF("FIFO THS/WM/WTM: %.2f -> %d", (double)fifo_threshold, sensor_fifo_threshold);
+	LOG_DBG("FIFO THS/WM/WTM: %.2f -> %d", (double)fifo_threshold, sensor_fifo_threshold);
 	sensor_imu->setup_DRDY(sensor_fifo_threshold); // do not need to reset pin config
 #endif
 	sensor_update_time_ms = time_ms; // TODO: terrible naming
@@ -606,6 +623,21 @@ static void sensor_update_sensor_state(void)
 			sys_request_WOM(false, false);
 			sensor_timeout = SENSOR_SENSOR_TIMEOUT_IMU_ELAPSED; // only try to suspend once
 		}
+		// Update timeout estimate
+		switch (sensor_timeout)
+		{
+		case SENSOR_SENSOR_TIMEOUT_ACTIVITY:
+			connection_update_sensor_timeout_time(CONFIG_3_SETTINGS_READ(CONFIG_3_ACTIVE_TIMEOUT_DELAY) - last_data_delta);
+			break;
+		case SENSOR_SENSOR_TIMEOUT_IMU:
+			if (CONFIG_1_SETTINGS_READ(CONFIG_1_USE_IMU_TIMEOUT) && CONFIG_0_SETTINGS_READ(CONFIG_0_USE_IMU_WAKE_UP))
+			{
+				connection_update_sensor_timeout_time(imu_timeout - last_data_delta);
+				break;
+			}
+		default:
+			connection_update_sensor_timeout_time(INT64_MAX);
+		}
 	}
 	else
 	{
@@ -615,6 +647,7 @@ static void sensor_update_sensor_state(void)
 		if (sensor_timeout == SENSOR_SENSOR_TIMEOUT_IMU_ELAPSED) // Resetting IMU timeout
 			sensor_timeout = SENSOR_SENSOR_TIMEOUT_IMU;
 		sensor_mode = SENSOR_SENSOR_MODE_LOW_NOISE;
+		connection_update_sensor_timeout_time(INT64_MAX);
 	}
 }
 
@@ -705,12 +738,12 @@ int sensor_init(void)
 	// Setup interrupt
 	float fifo_threshold = sensor_update_time_ms / 1000.0f / sensor_actual_time; // target loop rate
 	sensor_fifo_threshold = fifo_threshold;
-	LOG_INF("FIFO THS/WM/WTM: %.2f -> %d", (double)fifo_threshold, sensor_fifo_threshold);
+	LOG_DBG("FIFO THS/WM/WTM: %.2f -> %d", (double)fifo_threshold, sensor_fifo_threshold);
 	uint8_t pin_config = sensor_imu->setup_DRDY(sensor_fifo_threshold);
 	if (pin_config == 0)
 		return -1;
 	uint32_t int0_gpios = NRF_DT_GPIOS_TO_PSEL(ZEPHYR_USER_NODE, int0_gpios);
-	LOG_INF("FIFO THS/WM/WTM GPIO pin: %u, config: %u", int0_gpios, pin_config);
+	LOG_DBG("FIFO THS/WM/WTM GPIO pin: %u, config: %u", int0_gpios, pin_config);
 	uint32_t pull_flags = ((pin_config >> 4) == NRF_GPIO_PIN_PULLDOWN ? GPIO_PULL_DOWN : 0) | ((pin_config >> 4) == NRF_GPIO_PIN_PULLUP ? GPIO_PULL_UP : 0);
 	gpio_pin_configure_dt(&int0, GPIO_INPUT | pull_flags);
 	uint32_t int_flags = ((pin_config & 0xF) == NRF_GPIO_PIN_SENSE_LOW ? GPIO_INT_EDGE_FALLING : 0) | ((pin_config & 0xF) == NRF_GPIO_PIN_SENSE_HIGH ? GPIO_INT_EDGE_RISING : 0);
@@ -788,8 +821,12 @@ void sensor_loop(void)
 				sensor_mag->mag_oneshot();
 
 			// Read IMU temperature
-			float temp = sensor_imu->temp_read(); // TODO: use as calibration data
-			connection_update_sensor_temp(temp);
+			err = sensor_imu->temp_read(&temp); // TODO: use as calibration data
+			if (!err)
+			{
+				last_temp_time = k_uptime_get();
+				connection_update_sensor_temp(temp);
+			}
 
 			// Read gyroscope (FIFO)
 			uint16_t data_size = CONFIG_1_SETTINGS_READ(CONFIG_1_SENSOR_USE_LOW_POWER_2) ? 1900 : 1024; // Limit FIFO read to 2048 bytes (worst case is ICM 20 byte packet at 1000Hz and 100ms update time)
@@ -819,10 +856,11 @@ void sensor_loop(void)
 			if (mag_available && mag_enabled)
 				sensor_mag->mag_read(raw_m); // reading mag last, and it will be processed last
 
+			int16_t last_sensor_fifo_threshold = sensor_fifo_threshold;
+
 			if (reconfig) // TODO: get rid of reconfig?
 			{
 				// Changing FIFO threshold here should be fine since FIFO is empty now
-				// TODO: causing warnings since packet processing and loop timing still expects previous update_time
 				switch (sensor_mode)
 				{
 				case SENSOR_SENSOR_MODE_LOW_NOISE:
@@ -980,8 +1018,8 @@ void sensor_loop(void)
 			}
 
 			// Also check if expected number of timesteps when using FIFO threshold, if FIFO threshold is being used
-			if (sensor_fifo_threshold && processed_timesteps && processed_timesteps != sensor_fifo_threshold)
-				LOG_WRN("Expected %d timestep%s, got %d", sensor_fifo_threshold, sensor_fifo_threshold == 1 ? "" : "s", processed_timesteps);
+			if (last_sensor_fifo_threshold && processed_timesteps && processed_timesteps != last_sensor_fifo_threshold)
+				LOG_WRN("Expected %d timestep%s, got %d", last_sensor_fifo_threshold, last_sensor_fifo_threshold == 1 ? "" : "s", processed_timesteps);
 
 			// Update fusion gyro sanity? // TODO: use to detect drift and correct or suspend tracking
 //			sensor_fusion->update_gyro_sanity(g, m);

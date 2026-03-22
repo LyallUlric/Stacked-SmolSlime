@@ -155,7 +155,7 @@ uint16_t icm45_fifo_read(uint8_t *data, uint16_t len);
 int icm45_fifo_process(uint16_t index, uint8_t *data, float a[3], float g[3]);
 void icm45_accel_read(float a[3]);
 void icm45_gyro_read(float g[3]);
-float icm45_temp_read(void);
+int icm45_temp_read(float *data);
 
 uint8_t icm45_setup_DRDY(uint16_t threshold);
 uint8_t icm45_setup_WOM(void);

@@ -6,17 +6,17 @@ cmake:
     qualifiers: 'nrf52840/i2c'
     revision: ''
   images:
-   - name: 'SlimeVR-Tracker-nRF'
-     source-dir: 'C:/Users/Lyall/Documents/GitHub/SlimeVR-Tracker-nRF'
+   - name: 'Stacked-SmolSlime'
+     source-dir: 'C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime'
      type: 'MAIN'
   kconfig:
     files:
-     - 'C:/Users/Lyall/Documents/GitHub/SlimeVR-Tracker-nRF/i2c/_sysbuild/empty.conf'
-     - 'C:/Users/Lyall/Documents/GitHub/SlimeVR-Tracker-nRF/i2c/_sysbuild/empty.conf'
+     - 'C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/empty.conf'
+     - 'C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/empty.conf'
     user-files:
-     - 'C:/Users/Lyall/Documents/GitHub/SlimeVR-Tracker-nRF/i2c/_sysbuild/empty.conf'
+     - 'C:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c/_sysbuild/empty.conf'
 version: '0.1.0'
 west:
-  command: 'C:\ncs\toolchains\c1a76fddb2\opt\bin\Scripts\west build --build-dir c:/Users/Lyall/Documents/GitHub/SlimeVR-Tracker-nRF/i2c c:/Users/Lyall/Documents/GitHub/SlimeVR-Tracker-nRF --pristine --board promicro_uf2/nrf52840/i2c -- -DDTC_OVERLAY_FILE=socs/nrf52840_i2c.overlay -DBOARD_ROOT=c:/users/lyall/documents/github/slimevr-tracker-nrf'
-  topdir: 'c:\ncs\v3.1.0'
+  command: 'C:\ncs\toolchains\fd21892d0f\opt\bin\Scripts\west build --build-dir c:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime/i2c c:/Users/Lyall/Documents/GitHub/Stacked-SmolSlime --pristine --board promicro_uf2/nrf52840/i2c -- -DDTC_OVERLAY_FILE=socs/nrf52840_i2c.overlay -DBOARD_ROOT=c:/users/lyall/documents/github/slimevr-tracker-nrf'
+  topdir: 'c:\ncs\v3.2.4'
   version: '1.4.0'

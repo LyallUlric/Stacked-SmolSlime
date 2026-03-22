@@ -372,17 +372,20 @@ void icm45_gyro_read(float g[3])
 	}
 }
 
-float icm45_temp_read(void)
+int icm45_temp_read(float *data)
 {
 	uint8_t rawTemp[2];
 	int err = ssi_burst_read(SENSOR_INTERFACE_DEV_IMU, ICM45686_TEMP_DATA1_UI, &rawTemp[0], 2);
 	if (err)
+	{
 		LOG_ERR("Communication error");
+		return -1;
+	}
 	// Temperature in Degrees Centigrade = (TEMP_DATA / 128) + 25
-	float temp = (int16_t)((((uint16_t)rawTemp[0]) << 8) | rawTemp[1]);
-	temp /= 128;
-	temp += 25;
-	return temp;
+	*data = (int16_t)((((uint16_t)rawTemp[0]) << 8) | rawTemp[1]);
+	*data /= 128;
+	*data += 25;
+	return 0;
 }
 
 uint8_t icm45_setup_DRDY(uint16_t threshold)
@@ -454,7 +457,7 @@ const sensor_imu_t sensor_imu_icm45686 = {
 
 	*icm45_setup_DRDY,
 	*icm45_setup_WOM,
-	
+
 	*imu_none_ext_setup,
 	*icm45_ext_passthrough
 };
